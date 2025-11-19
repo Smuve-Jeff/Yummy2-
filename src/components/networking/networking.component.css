@@ -1,0 +1,23 @@
+/* src/components/networking/networking.component.css */
+
+:host {
+    display: contents;
+}
+
+/* Custom scrollbar for artist list */
+.flex-grow.overflow-y-auto::-webkit-scrollbar {
+    width: 8px;
+}
+
+.flex-grow.overflow-y-auto::-webkit-scrollbar-track {
+    background: var(--chat-history-track-bg); /* Reusing chat history scrollbar variables */
+}
+
+.flex-grow.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: var(--chat-history-thumb-bg);
+    border: 1px solid var(--chat-history-thumb-border);
+}
+
+.flex-grow.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: var(--chat-history-thumb-hover-bg);
+}
