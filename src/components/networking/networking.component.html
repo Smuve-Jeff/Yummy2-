@@ -1,0 +1,178 @@
+<!-- src/components/networking/networking.component.html -->
+<div class="w-full p-4 flex flex-col gap-4 relative min-h-[600px]"
+  [class]="'text-' + theme().neutral + '-200'"
+  [class]="'bg-' + theme().blue + '-900/50'"
+  [class]="'border border-' + theme().blue + '-500/30'">
+  <h2 class="text-center text-lg" [class]="'text-' + theme().blue + '-400'">[ AURA NETWORKING HUB ]</h2>
+
+  @if (errorMessage()) {
+    <div class="bg-red-900/50 text-red-300 p-3 text-center border border-red-500 animate-fade-in">
+      {{ errorMessage() }}
+    </div>
+  }
+  @if (!isAiAvailable()) {
+    <div class="bg-amber-900/50 text-amber-300 p-3 text-center border border-amber-500 animate-fade-in">
+      AI services are disabled. Networking search features might be limited.
+    </div>
+  }
+
+  <div class="p-4 flex flex-col sm:flex-row gap-4"
+    [class]="'border border-' + theme().blue + '-500/20'">
+    <div class="flex-grow flex flex-col gap-2">
+      <label for="location-search" class="block text-sm" [class]="'text-' + theme().blue + '-300'">SEARCH LOCATION:</label>
+      <input id="location-search"
+        type="text"
+        [value]="searchLocation()"
+        (input)="onSearchLocationInput($event)"
+        placeholder="e.g., 'Los Angeles, CA' or 'London, UK'"
+        class="w-full p-2 text-sm focus:ring-500"
+        [class]="'bg-' + theme().blue + '-800/50'"
+        [class]="'border border-' + theme().blue + '-500/50'"
+        [class]="'text-' + theme().neutral + '-200'"
+        [class]="'focus:ring-' + theme().blue + '-500'"
+        [class]="'focus:border-' + theme().blue + '-500'"
+        [disabled]="isLoading()">
+    </div>
+    <div class="flex-grow flex flex-col gap-2">
+      <label for="collaboration-filter" class="block text-sm" [class]="'text-' + theme().blue + '-300'">COLLABORATION INTEREST:</label>
+      <select id="collaboration-filter"
+        [value]="collaborationFilter()"
+        (change)="onCollaborationFilterInput($event)"
+        class="w-full p-2 text-sm focus:ring-500"
+        [class]="'bg-' + theme().blue + '-800/50'"
+        [class]="'border border-' + theme().blue + '-500/50'"
+        [class]="'text-' + theme().neutral + '-200'"
+        [class]="'focus:ring-' + theme().blue + '-500'"
+        [class]="'focus:border-' + theme().blue + '-500'"
+        [disabled]="isLoading()">
+        <option value="">Any</option>
+        <option value="Vocalist">Vocalist</option>
+        <option value="Producer">Producer</option>
+        <option value="Lyricist">Lyricist</option>
+        <option value="Guitarist">Guitarist</option>
+        <option value="Drummer">Drummer</option>
+        <option value="Bassist">Bassist</option>
+        <option value="DJ">DJ</option>
+        <option value="Songwriter">Songwriter</option>
+        <option value="Filmmaker">Filmmaker</option>
+        <option value="Mixing Engineer">Mixing Engineer</option>
+        <option value="Keyboardist">Keyboardist</option>
+        <option value="Saxophonist">Saxophonist</option>
+        <option value="Sound Designer">Sound Designer</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="flex gap-2 justify-center">
+    <button (click)="searchArtists()"
+      class="flex-grow px-4 py-2 border-2 text-lg max-w-sm"
+      [class]="'border-' + theme().blue + '-500'"
+      [class]="'bg-' + theme().blue + '-800'"
+      [class]="'text-' + theme().blue + '-300'"
+      [class]="'hover:bg-' + theme().blue + '-500'"
+      [class]="'hover:text-black'"
+      [disabled]="isLoading()">
+      @if (isLoading()) {
+        <span>[ SEARCHING... ]</span>
+      } @else {
+        <span>[ FIND ARTISTS ]</span>
+      }
+    </button>
+    <button (click)="clearSearch()"
+      class="px-4 py-2 border-2 text-lg max-w-sm"
+      [class]="'border-' + theme().neutral + '-500'"
+      [class]="'bg-' + theme().neutral + '-800'"
+      [class]="'text-' + theme().neutral + '-300'"
+      [class]="'hover:bg-' + theme().neutral + '-500'"
+      [class]="'hover:text-black'">
+      [ CLEAR ]
+    </button>
+  </div>
+
+  <h3 class="text-base mt-4" [class]="'text-' + theme().blue + '-300'">// COLLABORATORS FOUND:</h3>
+  <div class="flex-grow overflow-y-auto pr-2 space-y-4 p-2"
+    [class]="'border border-' + theme().blue + '-500/20'"
+    [style.--chat-history-track-bg]="'var(--color-' + theme().blue + '-950)'"
+    [style.--chat-history-thumb-bg]="'var(--color-' + theme().blue + '-400)'"
+    [style.--chat-history-thumb-border]="'var(--color-' + theme().blue + '-900)'"
+    [style.--chat-history-thumb-hover-bg]="'var(--color-' + theme().blue + '-300)'">
+    @for (artist of displayedArtists(); track artist.id) {
+      <div (click)="viewArtistDetail(artist)"
+           class="flex items-center gap-4 p-4 cursor-pointer transition-colors duration-200"
+        [class]="'bg-' + theme().blue + '-900/50'"
+        [class]="'border border-' + theme().blue + '-700/50'"
+        [class]="'hover:bg-' + theme().blue + '-800/70'">
+        <img [src]="artist.imageUrl" alt="{{ artist.name }}" class="w-20 h-20 object-cover border"
+          [class]="'border-' + theme().neutral + '-600'">
+        <div class="flex-grow">
+          <h4 class="text-lg" [class]="'text-' + theme().blue + '-300'">{{ artist.name }}</h4>
+          <p class="text-sm" [class]="'text-' + theme().neutral + '-400'">{{ artist.genre }} - {{ artist.location }}</p>
+          <p class="text-xs mt-1">{{ artist.bio.substring(0, 70) }}...</p>
+          <p class="text-xs mt-1" [class]="'text-' + theme().blue + '-500'">Interest: {{ artist.collaborationInterest.join(', ') }}</p>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 flex-shrink-0" [class]="'text-' + theme().blue + '-400'">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      </div>
+    } @empty {
+      <p class="text-center text-sm p-4" [class]="'text-' + theme().neutral + '-500'">No artists found. Adjust your search or clear filters.</p>
+    }
+  </div>
+</div>
+
+<!-- NEW: Artist Detail Modal -->
+@if (selectedArtistProfile() && showArtistDetailModal()) {
+  <div class="fixed inset-0 bg-black/60 z-40 animate-fade-in" (click)="closeArtistDetailModal()"></div>
+  <div class="fixed inset-x-4 bottom-4 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 border-2 bg-black/90 backdrop-blur-lg p-6 w-full max-w-lg flex flex-col z-50 animate-slide-up font-mono max-h-[90vh] overflow-hidden"
+    [class]="'border-' + theme().blue + '-400/50'"
+    [class]="'text-' + theme().blue + '-400'">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg">[[ ARTIST PROFILE: {{ selectedArtistProfile()!.name }} ]]</h2>
+      <button (click)="closeArtistDetailModal()" class="border px-2 hover:text-black transition-colors"
+        [class]="'border-' + theme().blue + '-400/50'"
+        [class]="'hover:bg-' + theme().blue + '-400'">
+        [X]
+      </button>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-4 mb-4 flex-shrink-0">
+      <img [src]="selectedArtistProfile()!.imageUrl" alt="{{ selectedArtistProfile()!.name }}" class="w-32 h-32 object-cover border flex-shrink-0"
+        [class]="'border-' + theme().neutral + '-600'">
+      <div class="flex-grow space-y-1">
+        <p class="text-sm" [class]="'text-' + theme().neutral + '-400'"><strong>Genre:</strong> {{ selectedArtistProfile()!.genre }} ({{ selectedArtistProfile()!.genres.join(', ') }})</p>
+        <p class="text-sm" [class]="'text-' + theme().neutral + '-400'"><strong>Location:</strong> {{ selectedArtistProfile()!.location }}</p>
+        <p class="text-sm" [class]="'text-' + theme().blue + '-500'"><strong>Collaboration Interest:</strong> {{ selectedArtistProfile()!.collaborationInterest.join(', ') }}</p>
+        <p class="text-sm" [class]="'text-' + theme().neutral + '-500'"><strong>Influences:</strong> {{ selectedArtistProfile()!.influences.join(', ') }}</p>
+        @if (selectedArtistProfile()!.specialties) {
+          <p class="text-sm" [class]="'text-' + theme().neutral + '-400'"><strong>Specialties:</strong> {{ selectedArtistProfile()!.specialties!.join(', ') }}</p>
+        }
+        @if (selectedArtistProfile()!.targetAudience) {
+          <p class="text-sm" [class]="'text-' + theme().neutral + '-400'"><strong>Target Audience:</strong> {{ selectedArtistProfile()!.targetAudience }}</p>
+        }
+        @if (selectedArtistProfile()!.careerGoals) {
+          <p class="text-sm" [class]="'text-' + theme().neutral + '-400'"><strong>Career Goals:</strong> {{ selectedArtistProfile()!.careerGoals }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="flex-grow overflow-y-auto pr-2 text-sm border-t pt-4" [class]="'border-' + theme().blue + '-500/30'">
+      <p class="mb-4">{{ selectedArtistProfile()!.bio }}</p>
+
+      <h3 class="text-sm" [class]="'text-' + theme().blue + '-300'">// LINKS:</h3>
+      <div class="space-y-1">
+        @for (link of selectedArtistProfile()!.links; track link.url) {
+          <a [href]="link.url" target="_blank" rel="noopener noreferrer" class="block text-xs underline"
+            [class]="'text-' + theme().neutral + '-400'"
+            [class]="'hover:text-' + theme().blue + '-300'">
+            {{ link.type.toUpperCase() }}: {{ link.url }}
+          </a>
+        } @empty {
+          <p class="text-xs" [class]="'text-' + theme().neutral + '-500'">No links available.</p>
+        }
+      </div>
+
+      <h3 class="text-sm mt-4" [class]="'text-' + theme().blue + '-300'">// CONTACT:</h3>
+      <p class="text-xs" [class]="'text-' + theme().neutral + '-400'">{{ selectedArtistProfile()!.contact }}</p>
+    </div>
+  </div>
+}
