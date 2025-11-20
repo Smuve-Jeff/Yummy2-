@@ -1,0 +1,89 @@
+<div class="w-full h-full p-4 flex flex-col gap-4"
+  [class]="'text-' + theme().neutral + '-200'"
+  [class]="'bg-' + theme().primary + '-900/30'">
+
+  <div class="flex justify-between items-center border-b pb-2"
+    [class]="'border-' + theme().primary + '-500/30'">
+    <h2 class="text-xl font-bold tracking-wider" [class]="'text-' + theme().primary + '-400'">// LYRIC PAD & RECORDER</h2>
+    <div class="flex gap-2">
+      <button (click)="saveNote()" class="px-3 py-1 text-sm border hover:bg-white hover:text-black transition-colors"
+        [class]="'border-' + theme().primary + '-500'"
+        [class]="'text-' + theme().primary + '-400'">
+        [ SAVE ]
+      </button>
+    </div>
+  </div>
+
+  <div class="flex-grow flex flex-col md:flex-row gap-4 min-h-0">
+    <!-- Text Area -->
+    <div class="flex-grow flex flex-col relative">
+      <textarea
+        [value]="lyricsText()"
+        (input)="onTextInput($event)"
+        class="w-full h-full p-4 bg-black/50 border focus:outline-none font-mono text-lg resize-none"
+        [class]="'border-' + theme().primary + '-500/50'"
+        [class]="'focus:border-' + theme().primary + '-400'"
+        placeholder="Write your lyrics here..."></textarea>
+
+      @if (generationStatus()) {
+        <div class="absolute bottom-4 right-4 text-xs px-2 py-1 bg-black border"
+          [class]="'text-' + theme().primary + '-400'"
+          [class]="'border-' + theme().primary + '-500'">
+          {{ generationStatus() }}
+        </div>
+      }
+    </div>
+
+    <!-- Sidebar Controls -->
+    <div class="w-full md:w-64 flex flex-col gap-4">
+      <!-- AI Tools -->
+      <div class="p-4 border bg-black/30" [class]="'border-' + theme().primary + '-500/30'">
+        <h3 class="text-sm mb-2" [class]="'text-' + theme().primary + '-300'">AI ASSISTANT</h3>
+        <button (click)="generateLyrics()"
+          class="w-full py-2 border text-center hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+          [class]="'border-' + theme().primary + '-500'"
+          [class]="'text-' + theme().primary + '-400'"
+          [disabled]="!isAiAvailable()">
+          [ GENERATE / CONTINUE ]
+        </button>
+        @if (!isAiAvailable()) {
+          <p class="text-xs mt-2 text-red-400">AI API Key missing.</p>
+        }
+      </div>
+
+      <!-- Audio Recorder -->
+      <div class="p-4 border bg-black/30 flex-grow flex flex-col" [class]="'border-' + theme().primary + '-500/30'">
+        <h3 class="text-sm mb-2" [class]="'text-' + theme().primary + '-300'">VOICE MEMO</h3>
+
+        <div class="flex-grow flex flex-col justify-center items-center gap-4">
+          @if (!isRecording()) {
+            <button (click)="startRecording()"
+              class="w-16 h-16 rounded-full border-2 flex items-center justify-center hover:bg-red-900/50 transition-colors"
+              [class]="'border-red-500 text-red-500'">
+              REC
+            </button>
+          } @else {
+            <button (click)="stopRecording()"
+              class="w-16 h-16 rounded-full border-2 flex items-center justify-center animate-pulse bg-red-900/80"
+              [class]="'border-red-500 text-red-500'">
+              STOP
+            </button>
+            <p class="text-xs text-red-400 animate-pulse">RECORDING...</p>
+          }
+
+          @if (recordedAudioUrl()) {
+            <div class="w-full mt-4 pt-4 border-t" [class]="'border-' + theme().primary + '-500/30'">
+              <button (click)="togglePlayback()"
+                class="w-full py-2 border text-center hover:bg-white hover:text-black transition-colors mb-2"
+                [class]="'border-' + theme().primary + '-500'"
+                [class]="'text-' + theme().primary + '-400'">
+                {{ isPlaying() ? '[ PAUSE ]' : '[ PLAY RECORDING ]' }}
+              </button>
+              <audio [src]="recordedAudioUrl()" controls class="w-full h-8 opacity-50 hover:opacity-100"></audio>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
