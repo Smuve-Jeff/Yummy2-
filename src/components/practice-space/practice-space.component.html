@@ -1,0 +1,59 @@
+<div class="practice-space-container" [class]="'border-' + theme().primary + '-400/50' + ' text-' + theme().primary + '-400'">
+    <h2 class="text-xl text-center mb-4">[ PRACTICE SPACE ]</h2>
+
+    <div class="recorder-section" [class]="'border-' + theme().accent + '-500/30'">
+      <h3 class="text-lg">[ RECORDER ]</h3>
+
+      <div class="flex items-center gap-4">
+        <button (click)="toggleRecording()" class="px-4 py-2 border hover:text-black transition-colors"
+          [class]="'border-' + theme().accent + '-500'"
+          [class]="'hover:bg-' + theme().accent + '-500'">
+          @if (isRecording()) {
+            <span>[ STOP RECORDING ]</span>
+          } @else {
+            <span>[ START RECORDING ]</span>
+          }
+        </button>
+        <span class="text-2xl font-mono">{{ formatTime(recordingTime()) }}</span>
+      </div>
+
+      @if (recordedUrl()) {
+        <div class="w-full max-w-md mt-4 flex flex-col items-center gap-2">
+          <audio [src]="recordedUrl()" controls class="w-full"></audio>
+          <a [href]="recordedUrl()" download="practice_session.webm" class="text-sm hover:underline">[ DOWNLOAD SESSION ]</a>
+        </div>
+      }
+    </div>
+
+    <div class="notes-section">
+      <h3 class="text-lg">[ NOTES / LYRICS ]</h3>
+      <textarea
+        [value]="notes()"
+        (input)="updateNotes($event)"
+        placeholder="Type your lyrics, thoughts, or questions for S.M.U.V.E here..."
+        class="w-full h-32 bg-black border p-2 font-mono focus:outline-none focus:ring-1"
+        [class]="'border-' + theme().neutral + '-600' + ' text-' + theme().neutral + '-200' + ' placeholder-' + theme().neutral + '-500' + ' focus:ring-' + theme().primary + '-500'"
+      ></textarea>
+    </div>
+
+    <div class="actions flex justify-end mt-2">
+      <button (click)="getAiFeedback()"
+        [disabled]="isGettingFeedback()"
+        class="px-4 py-2 border hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        [class]="'border-' + theme().primary + '-500'"
+        [class]="'hover:bg-' + theme().primary + '-500'">
+        @if (isGettingFeedback()) {
+          <span>[ ANALYZING... ]</span>
+        } @else {
+          <span>[ ASK S.M.U.V.E FOR CRITIQUE ]</span>
+        }
+      </button>
+    </div>
+
+    @if (aiFeedback()) {
+      <div class="feedback-section mt-4" [class]="'border-' + theme().primary + '-500/50'">
+        <h3 class="text-lg mb-2">[ S.M.U.V.E FEEDBACK ]</h3>
+        <p class="whitespace-pre-wrap text-sm">{{ aiFeedback() }}</p>
+      </div>
+    }
+  </div>
