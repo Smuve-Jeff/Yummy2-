@@ -1,0 +1,67 @@
+/* src/components/piano-roll/piano-roll.component.css */
+
+.piano-roll-grid {
+  grid-template-columns: 80px repeat(16, 1fr); /* Note name column + 16 steps */
+  grid-auto-rows: 24px; /* Height for each note row */
+  width: max-content; /* Allow grid to expand horizontally */
+}
+
+.sequencer-header, .note-name, .note-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.aura-slider {
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-amber-900); /* Default background */
+  outline: none;
+  opacity: 0.7;
+  transition: opacity .2s;
+}
+
+.aura-slider:hover {
+  opacity: 1;
+}
+
+.aura-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-amber-400); /* Default thumb color */
+  cursor: pointer;
+  border: 1px solid var(--color-amber-900);
+}
+
+.aura-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-amber-400);
+  cursor: pointer;
+  border: 1px solid var(--color-amber-900);
+}
+
+/* Custom scrollbar for overflow-x-auto container */
+div::-webkit-scrollbar {
+  height: 8px; /* For horizontal scrollbar */
+}
+
+div::-webkit-scrollbar-track {
+  background: var(--color-neutral-800); /* Default background */
+}
+
+div::-webkit-scrollbar-thumb {
+  background: var(--color-primary-400); /* Corrected missing part */
+  border-radius: 4px;
+  border: 1px solid var(--color-primary-700);
+}
+
+div::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-300);
+}
