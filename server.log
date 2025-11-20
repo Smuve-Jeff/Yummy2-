@@ -1,0 +1,6 @@
+
+> smuve_4.5@0.0.0 serve
+> live-server dist
+
+[32mServing "dist" at http://127.0.0.1:8080[39m
+[36mReady for changes[39m

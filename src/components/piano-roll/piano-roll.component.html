@@ -1,0 +1,106 @@
+<!-- src/components/piano-roll/piano-roll.component.html -->
+<div class="w-full p-4 flex flex-col gap-4 relative"
+  [class]="'text-' + theme().neutral + '-200'"
+  [class]="'bg-' + theme().neutral + '-900/50'"
+  [class]="'border border-' + theme().primary + '-500/30'">
+  <h2 class="text-center text-lg" [class]="'text-' + theme().primary + '-400'">[ AURA PIANO ROLL ]</h2>
+
+  <!-- Controls -->
+  <div class="flex flex-col sm:flex-row justify-between items-center gap-4 p-2"
+    [class]="'border border-' + theme().primary + '-500/20'">
+    <div class="flex items-center gap-4">
+      <button (click)="togglePlay()" class="w-24 px-4 py-2 border-2 text-lg"
+        [class]="'border-' + theme().primary + '-500'"
+        [class]="'bg-' + theme().neutral + '-800'"
+        [class]="'text-' + theme().primary + '-300'"
+        [class]="'hover:bg-' + theme().primary + '-500'"
+        [class]="'hover:text-black'">
+        @if (isPlaying()) {
+          <span>[ STOP ]</span>
+        } @else {
+          <span>[ PLAY ]</span>
+        }
+      </button>
+      <button (click)="resetSequence()" class="px-3 py-2 border-2 text-lg"
+        [class]="'border-' + theme().neutral + '-500'"
+        [class]="'bg-' + theme().neutral + '-800'"
+        [class]="'text-' + theme().neutral + '-300'"
+        [class]="'hover:bg-' + theme().neutral + '-500'"
+        [class]="'hover:text-black'">
+        [ RESET ]
+      </button>
+      <div class="flex items-center gap-2">
+        <label for="bpm" class="text-sm">BPM:</label>
+        <input id="bpm-slider" type="range" min="60" max="240" [value]="bpm()" (input)="onBpmChange($event)" class="w-24 aura-slider">
+        <input id="bpm-text" type="number" min="60" max="240" [value]="bpm()" (input)="onBpmChange($event)" class="p-1 text-sm w-16 text-center"
+          [class]="'bg-' + theme().neutral + '-800'"
+          [class]="'border border-' + theme().primary + '-500/50'"
+          [class]="'text-' + theme().neutral + '-200'"
+          [class]="'focus:ring-' + theme().primary + '-500'"
+          [class]="'focus:border-' + theme().primary + '-500'">
+      </div>
+      <div class="flex items-center gap-2">
+        <label for="key" class="text-sm">Key:</label>
+        <select id="key" (change)="selectedKey.set($event.target.value)" class="p-1 text-sm w-24 text-center"
+          [class]="'bg-' + theme().neutral + '-800'"
+          [class]="'border border-' + theme().primary + '-500/50'"
+          [class]="'text-' + theme().neutral + '-200'"
+          [class]="'focus:ring-' + theme().primary + '-500'"
+          [class]="'focus:border-' + theme().primary + '-500'">
+          <option *ngFor="let key of keys" [value]="key">{{key}}</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2">
+        <label for="scale" class="text-sm">Scale:</label>
+        <select id="scale" (change)="selectedScale.set($event.target.value)" class="p-1 text-sm w-24 text-center"
+          [class]="'bg-' + theme().neutral + '-800'"
+          [class]="'border border-' + theme().primary + '-500/50'"
+          [class]="'text-' + theme().neutral + '-200'"
+          [class]="'focus:ring-' + theme().primary + '-500'"
+          [class]="'focus:border-' + theme().primary + '-500'">
+          <option *ngFor="let scale of objectKeys(scales)" [value]="scale">{{scale}}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Piano Roll Grid -->
+  <div class="w-full overflow-x-auto">
+    <div class="piano-roll-grid grid gap-0.5 p-2"
+      [class]="'bg-' + theme().neutral + '-800'"
+      [class]="'border border-' + theme().primary + '-500/20'">
+      <!-- Sequencer Header (Steps) -->
+      <div class="sequencer-header text-neutral-400 text-xs text-right pr-2"></div> <!--- Spacer for note names col -->
+      @for(step of [].constructor(16); track $index) {
+        <div class="step-header text-xs text-center p-1"
+          [class]="currentStep() === $index ? 'text-' + theme().primary + '-300' : 'text-' + theme().neutral + '-400'"
+          [class.font-bold]="currentStep() === $index"
+          [class.current-step-bg]="currentStep() === $index">
+          {{ $index + 1 }}
+        </div>
+      }
+
+      <!-- Note Rows -->
+      @for(note of allNotes; track note.midi; let noteIndex = $index) {
+        <div class="note-name text-xs text-right pr-2 py-1"
+          [class.font-bold]="note.name.includes('#')"
+          [class]="note.name.includes('#') ? 'text-' + theme().primary + '-400/70' : 'text-' + theme().primary + '-400'"
+          [class.in-scale]="getNotesInScale().includes(note.midi)">
+          {{ getNoteDisplay(note) }}
+        </div>
+        @for(stepValue of sequence().get(note.midi) || []; track $index) {
+          <div
+            (click)="toggleNote(note.midi, $index)"
+            class="note-step w-6 h-6 border cursor-pointer transition-all duration-75"
+            [class]="'border-' + theme().neutral + '-700'"
+            [class]="!stepValue && currentStep() !== $index ? 'bg-' + theme().neutral + '-700' : ''"
+            [class]="!stepValue && currentStep() === $index ? 'bg-' + theme().primary + '-900' : ''"
+            [class]="stepValue ? 'bg-' + theme().primary + '-500' : ''"
+            [class]="stepValue && currentStep() === $index ? 'bg-' + theme().primary + '-400' : ''"
+            [class.in-scale-bg]="getNotesInScale().includes(note.midi)">
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>
