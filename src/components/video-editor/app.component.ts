@@ -7,6 +7,7 @@ import { ImageEditorComponent } from '../image-editor/image-editor.component';
 import { VideoEditorComponent } from './video-editor.component';
 import { AudioVisualizerComponent } from '../audio-visualizer/audio-visualizer.component'; // Corrected import path
 import { PianoRollComponent } from '../piano-roll/piano-roll.component'; // Import PianoRollComponent
+import { DrumMachineComponent } from '../drum-machine/drum-machine.component'; // Import DrumMachineComponent
 import { NetworkingComponent, ArtistProfile, MOCK_ARTISTS } from '../networking/networking.component'; // NEW: Import NetworkingComponent and types
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
 
@@ -104,7 +105,7 @@ const THEMES: AppTheme[] = [
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, NetworkingComponent],
+  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, DrumMachineComponent, NetworkingComponent],
   host: {
     // Moved host listeners from @HostListener decorators to the host object
     '(window:mousemove)': 'onScratch($event)',
@@ -120,8 +121,11 @@ export class AppComponent implements OnDestroy {
   videoPlayerBRef = viewChild<ElementRef<HTMLVideoElement>>('videoPlayerB');
   fileInputRef = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
+  // NEW: ViewChild for Drum Machine
+  drumMachineRef = viewChild<DrumMachineComponent>(DrumMachineComponent);
+
   // App mode
-  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking'>('player');
+  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'drum-machine' | 'image-editor' | 'video-editor' | 'networking'>('player');
   showChatbot = signal(true); // Chatbot is a modal, starts open for initial greeting
 
   // DJ State
@@ -1182,7 +1186,7 @@ export class AppComponent implements OnDestroy {
 
   // --- App Mode Management ---
   toggleMainViewMode(): void {
-    const modes = ['player', 'dj', 'piano-roll', 'image-editor', 'video-editor', 'networking']; // NEW: Add 'networking'
+    const modes = ['player', 'dj', 'piano-roll', 'drum-machine', 'image-editor', 'video-editor', 'networking']; // NEW: Add 'networking'
     const currentMode = this.mainViewMode();
     const currentIndex = modes.indexOf(currentMode);
     const nextIndex = (currentIndex + 1) % modes.length;
@@ -1343,6 +1347,57 @@ export class AppComponent implements OnDestroy {
             console.warn(`Artist "${parameters.name}" not found in mock data or no matching criteria.`);
             // Optionally send a message back to chatbot that artist was not found
           }
+        }
+        break;
+      case 'START_DRUM':
+        this.mainViewMode.set('drum-machine');
+        setTimeout(() => this.drumMachineRef()?.start(), 0);
+        break;
+      case 'STOP_DRUM':
+        this.mainViewMode.set('drum-machine');
+        setTimeout(() => this.drumMachineRef()?.stop(), 0);
+        break;
+      case 'SET_BPM':
+        if (parameters.bpm) {
+          this.mainViewMode.set('drum-machine');
+          setTimeout(() => this.drumMachineRef()?.setBpm(parseInt(parameters.bpm, 10)), 0);
+        }
+        break;
+      case 'CLEAR_BEAT':
+        this.mainViewMode.set('drum-machine');
+        setTimeout(() => this.drumMachineRef()?.clearPattern(), 0);
+        break;
+      case 'GENERATE_BEAT':
+        if (parameters.pattern) {
+          this.mainViewMode.set('drum-machine');
+          try {
+            // Parse JSON if it's a string, or use directly if already an object (though it usually comes as string from AI)
+            const pattern = typeof parameters.pattern === 'string' ? JSON.parse(parameters.pattern) : parameters.pattern;
+            setTimeout(() => this.drumMachineRef()?.setPattern(pattern), 0);
+          } catch (e) {
+            console.error('Failed to parse drum pattern:', e);
+          }
+        }
+        break;
+      case 'TOGGLE_TRACK_MUTE':
+        if (parameters.track) {
+           this.mainViewMode.set('drum-machine');
+           // This logic requires checking current state, which is hard from here without querying the component.
+           // For simplicity, we might assume 'mute' meant 'toggle'. Or we can ask AI to send explicit state.
+           // Let's assume toggle for now or just force a state if parameter allows.
+           // Actually the component has toggleMute(index). We need name to index mapping.
+           // The component's new method setTrackMute accepts a boolean. We need to know if we want to mute or unmute.
+           // Let's assume 'true' if not specified, or maybe the AI can send 'mute=true'.
+           // command: TOGGLE_TRACK_MUTE:::track='kick', mute='true'
+           const muteState = parameters.mute === 'true' || parameters.mute === true;
+           setTimeout(() => this.drumMachineRef()?.setTrackMute(parameters.track, muteState), 0);
+        }
+        break;
+      case 'TOGGLE_TRACK_SOLO':
+        if (parameters.track) {
+           this.mainViewMode.set('drum-machine');
+           const soloState = parameters.solo === 'true' || parameters.solo === true;
+           setTimeout(() => this.drumMachineRef()?.setTrackSolo(parameters.track, soloState), 0);
         }
         break;
       default:
