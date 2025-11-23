@@ -1330,15 +1330,16 @@ export class AppComponent implements OnDestroy {
         if (parameters.name) {
           // FIX: Filter MOCK_ARTISTS based on genre or other relevant criteria
           const matchingArtists = MOCK_ARTISTS.filter(a =>
-            a.name.toLowerCase() === parameters.name.toLowerCase() ||
-            (parameters.genre && a.genres.some(g => g.toLowerCase().includes(parameters.genre.toLowerCase()))) ||
-            (parameters.location && a.location.toLowerCase().includes(parameters.location.toLowerCase()))
+            a.name.toLowerCase() === parameters.name.toLowerCase() &&
+            (!parameters.genre || a.genres.some(g => g.toLowerCase().includes(parameters.genre.toLowerCase()))) &&
+            (!parameters.location || a.location.toLowerCase().includes(parameters.location.toLowerCase()))
           );
           if (matchingArtists.length > 0) {
             this.selectedArtistProfile.set(matchingArtists[0]); // Select first match
             this.mainViewMode.set('networking'); // Switch to networking view
             this.showChatbot.set(false); // Close chatbot
           } else {
+            this.selectedArtistProfile.set(null);
             console.warn(`Artist "${parameters.name}" not found in mock data or no matching criteria.`);
             // Optionally send a message back to chatbot that artist was not found
           }
