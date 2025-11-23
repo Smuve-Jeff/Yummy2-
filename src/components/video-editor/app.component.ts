@@ -1136,12 +1136,12 @@ export class AppComponent implements OnDestroy {
       return;
     }
 
-    const file = new File([blob], 'aura-mix.webm', { type: blob.type });
+    const file = new File([blob], 'smuve-mix.webm', { type: blob.type });
     try {
       await navigator.share({
         files: [file],
-        title: 'Aura Mix',
-        text: 'Check out my latest mix from Aura Music Player!',
+        title: 'S.M.U.V.E. Mix',
+        text: 'Check out my latest mix from S.M.U.V.E. AI Music Manager!',
       });
       console.log('Mix shared successfully.');
     } catch (error) {

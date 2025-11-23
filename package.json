@@ -1,7 +1,8 @@
 {
-  "name": "smuve_4.5",
+  "name": "smuve-ai-music-manager",
+  "description": "S.M.U.V.E. AI Chatbot Music Manager",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
