@@ -5,6 +5,8 @@ import type { GoogleGenAI, GenerateImagesParameters, GenerateImagesResponse, Typ
 import { AppTheme } from '../video-editor/app.component';
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
 
+export type MockupType = 't-shirt' | 'hoodie' | 'vinyl';
+
 @Component({
   selector: 'app-image-editor',
   templateUrl: './image-editor.component.html',
@@ -24,6 +26,10 @@ export class ImageEditorComponent {
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
   aspectRatio = signal<'1:1' | '3:4' | '4:3' | '9:16' | '16:9'>('1:1'); // NEW: Aspect ratio signal
+
+  // NEW: Mockup state
+  viewMode = signal<'generate' | 'mockup'>('generate');
+  currentMockupType = signal<MockupType>('t-shirt');
 
   private aiService = inject(AiService); // NEW: Inject AiService
   isAiAvailable = computed(() => this.aiService.isAiAvailable);
@@ -131,9 +137,7 @@ export class ImageEditorComponent {
 
   // NEW: Emit the currently displayed image URL
   useAsAlbumArt(): void {
-    const urlToEmit = this.generatedImageUrls().length > 0
-      ? this.generatedImageUrls()[0]
-      : this.originalImageUrl();
+    const urlToEmit = this.getCurrentImage();
 
     if (urlToEmit) {
       this.imageSelected.emit(urlToEmit);
@@ -145,9 +149,7 @@ export class ImageEditorComponent {
 
   // NEW: Request image analysis for the current image
   requestImageAnalysis(): void {
-    const imageUrlToAnalyze = this.generatedImageUrls().length > 0
-      ? this.generatedImageUrls()[0]
-      : this.originalImageUrl();
+    const imageUrlToAnalyze = this.getCurrentImage();
 
     if (imageUrlToAnalyze) {
       this.imageAnalysisRequest.emit(imageUrlToAnalyze);
@@ -155,5 +157,21 @@ export class ImageEditorComponent {
     } else {
       this.errorMessage.set('No image available to analyze.');
     }
+  }
+
+  // Helper to get current image
+  getCurrentImage(): string | null {
+      return this.generatedImageUrls().length > 0
+      ? this.generatedImageUrls()[0]
+      : this.originalImageUrl();
+  }
+
+  // AI Command handler for mockups
+  createMockup(type: string) {
+      if (type.includes('shirt')) this.currentMockupType.set('t-shirt');
+      else if (type.includes('hoodie')) this.currentMockupType.set('hoodie');
+      else if (type.includes('vinyl') || type.includes('record')) this.currentMockupType.set('vinyl');
+
+      this.viewMode.set('mockup');
   }
 }

@@ -5,37 +5,38 @@
     [class]="mainBorderClass()"
     [class.dj-vintage-theme]="mainViewMode() === 'dj'">
     <header class="flex justify-between items-center p-2 sm:p-4 border-b-2 border-inherit">
-      <h1 class="text-xl sm:text-2xl" [class]="mainTextColorClass()">[ AURA ]</h1>
+      <h1 class="text-xl sm:text-2xl" [class]="mainTextColorClass()">[ S.M.U.V.E ]</h1>
       <div class="flex items-center gap-2">
         <button (click)="randomizeTheme()" class="p-2 border border-inherit hover:text-black text-sm transition-colors"
           [class]="mainBorderClass()"
           [class]="mainHoverBgClass()">
-          <span>[ RANDOM THEME ]</span>
+          <span>[ THEME ]</span>
         </button>
-        <button (click)="toggleMainViewMode()" class="p-2 border border-inherit hover:text-black text-sm transition-colors"
-          [class]="mainBorderClass()"
-          [class]="mainHoverBgClass()">
-          @if (mainViewMode() === 'player') {
-            <span>[ DJ ]</span>
-          } @else if (mainViewMode() === 'dj') {
-            <span>[ PIANO EDITOR ]</span>
-          } @else if (mainViewMode() === 'piano-roll') {
-            <span>[ IMAGE EDITOR ]</span>
-          } @else if (mainViewMode() === 'image-editor') {
-            <span>[ VIDEO EDITOR ]</span>
-          } @else if (mainViewMode() === 'video-editor') {
-            <span>[ NETWORKING ]</span>
-          } @else if (mainViewMode() === 'networking') {
-            <span>[ PLAYER ]</span>
-          }
-        </button>
+        <div class="relative group z-50">
+            <button class="p-2 border border-inherit hover:text-black text-sm transition-colors"
+              [class]="mainBorderClass()"
+              [class]="mainHoverBgClass()">
+              <span>[ MODE: {{ mainViewMode().toUpperCase().replace('-', ' ') }} ]</span>
+            </button>
+            <div class="absolute right-0 top-full hidden group-hover:flex flex-col w-48 bg-black border border-inherit shadow-xl">
+                 <button (click)="setMode('player')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ PLAYER ]</button>
+                 <button (click)="setMode('dj')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ DJ ]</button>
+                 <button (click)="setMode('drum-machine')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ DRUM MACHINE ]</button>
+                 <button (click)="setMode('piano-roll')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ PIANO ROLL ]</button>
+                 <button (click)="setMode('lyricist')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ LYRICIST ]</button>
+                 <button (click)="setMode('image-editor')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ IMAGE / MERCH ]</button>
+                 <button (click)="setMode('video-editor')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ VIDEO EDITOR ]</button>
+                 <button (click)="setMode('release-manager')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ RELEASE MGR ]</button>
+                 <button (click)="setMode('networking')" class="p-2 text-left hover:bg-white/10" [class]="mainTextColorClass()">[ NETWORKING ]</button>
+            </div>
+        </div>
         <button (click)="toggleChatbot()" class="p-2 border border-inherit hover:text-black text-sm transition-colors"
           [class]="mainBorderClass()"
           [class]="mainHoverBgClass()">
           @if (showChatbot()) {
-            <span>[ CLOSE CHATBOT ]</span>
+            <span>[ CLOSE AI ]</span>
           } @else {
-            <span>[ CHATBOT ]</span>
+            <span>[ ASK AI ]</span>
           }
         </button>
       </div>
@@ -360,6 +361,15 @@
         @case ('piano-roll') {
           <app-piano-roll [theme]="currentTheme()"></app-piano-roll>
         }
+        @case ('drum-machine') {
+          <app-drum-machine [theme]="currentTheme()"></app-drum-machine>
+        }
+        @case ('lyricist') {
+          <app-lyricist [theme]="currentTheme()"></app-lyricist>
+        }
+        @case ('release-manager') {
+          <app-release-manager [theme]="currentTheme()"></app-release-manager>
+        }
         @case ('player') {
         <!-- PLAYER MODE -->
         <div class="flex flex-col md:flex-row gap-4">
@@ -598,6 +608,23 @@
       <div class="flex-grow overflow-y-auto pr-2 text-sm border-t pt-4" [class]="mainBorderClass()">
         <p>{{ mapLocationResult() }}</p>
       </div>
+    </div>
+  }
+
+  <!-- NEW: Artist Detail Modal -->
+  @if (showArtistDetailModal() && selectedArtistProfile()) {
+    <div class="fixed inset-0 bg-black/60 z-40 animate-fade-in" (click)="showArtistDetailModal.set(false)"></div>
+    <div class="fixed inset-x-4 bottom-4 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 border-2 bg-black/90 backdrop-blur-lg p-0 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col z-50 animate-slide-up font-mono"
+      [class]="mainBorderClass()">
+        <div class="p-4 border-b flex justify-between items-center" [class]="mainBorderClass()">
+            <h2 class="text-xl font-bold" [class]="mainTextColorClass()">// ARTIST PROFILE_</h2>
+            <button (click)="showArtistDetailModal.set(false); selectedArtistProfile.set(null);" class="border px-2 hover:text-black transition-colors"
+            [class]="mainBorderClass()"
+            [class]="mainHoverBgClass()">[CLOSE]</button>
+        </div>
+        <div class="flex-grow overflow-y-auto p-0">
+             <app-networking [theme]="currentTheme()" [initialSearchQuery]="null" [forcedArtistProfile]="selectedArtistProfile()"></app-networking>
+        </div>
     </div>
   }
 </main>

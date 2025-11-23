@@ -1,0 +1,76 @@
+<div class="h-full flex flex-col p-4 overflow-y-auto"
+     [class]="'bg-' + theme().neutral + '-900 text-' + theme().neutral + '-200'">
+
+  <div class="flex justify-between items-center mb-6">
+    <div class="flex items-center gap-4">
+        <h2 class="text-2xl font-bold tracking-widest uppercase" [class]="'text-' + theme().primary + '-400'">
+        Drum Machine
+        </h2>
+        <div class="px-2 py-1 rounded text-xs border" [class]="'border-' + theme().primary + '-500/50 text-' + theme().primary + '-400'">
+            {{ bpm() }} BPM
+        </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button (click)="togglePlay()"
+              class="px-6 py-2 rounded font-bold uppercase tracking-wider transition-all duration-200"
+              [class]="isPlaying() ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-' + theme().primary + '-500 text-black hover:bg-' + theme().primary + '-400'">
+        {{ isPlaying() ? 'Stop' : 'Play' }}
+      </button>
+      <button (click)="reset()"
+              class="px-4 py-2 rounded border transition-colors"
+              [class]="'border-' + theme().neutral + '-600 hover:bg-' + theme().neutral + '-800'">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <div class="flex-1 flex flex-col justify-center gap-4">
+    <div *ngFor="let track of tracks(); let tIdx = index"
+         class="flex items-center gap-4 p-3 rounded-lg border bg-opacity-20 transition-colors duration-300"
+         [class]="'bg-' + theme().neutral + '-800 border-' + theme().neutral + '-700 hover:border-' + theme().primary + '-500/30'">
+
+      <!-- Track Controls -->
+      <div class="w-32 flex flex-col gap-1">
+        <div class="flex justify-between items-center">
+            <span class="font-bold text-sm" [class]="'text-' + theme().accent + '-300'">{{ track.name }}</span>
+            <button (click)="track.mute = !track.mute"
+                    class="text-xs px-1 rounded border"
+                    [class]="track.mute ? 'bg-red-900/50 border-red-500 text-red-400' : 'border-' + theme().neutral + '-600 text-' + theme().neutral + '-500'">
+                {{ track.mute ? 'MUTE' : 'M' }}
+            </button>
+        </div>
+        <input type="range" min="0" max="1" step="0.1" [value]="track.vol"
+               (input)="track.vol = +$any($event.target).value"
+               class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+      </div>
+
+      <!-- Sequencer Grid -->
+      <div class="flex-1 grid grid-cols-16 gap-1 h-12">
+        <div *ngFor="let step of track.steps; let sIdx = index"
+             (click)="updateTrackStep(tIdx, sIdx)"
+             class="h-full rounded cursor-pointer transition-all duration-100 relative group"
+             [ngClass]="{
+               'opacity-100': step,
+               'opacity-20': !step,
+               'border-r-2 border-r-white/20': (sIdx + 1) % 4 === 0 && sIdx !== 15
+             }"
+             [class]="step ? 'bg-' + theme().primary + '-500 shadow-[0_0_10px_rgba(var(--color-' + theme().primary + '-500),0.5)]' : 'bg-' + theme().neutral + '-700 hover:bg-' + theme().neutral + '-600'">
+
+             <!-- Playhead Indicator -->
+             <div *ngIf="currentStep() === sIdx"
+                  class="absolute inset-0 border-2 z-10 pointer-events-none rounded animate-pulse"
+                  [class]="'border-white'">
+             </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="mt-6 p-4 rounded border bg-black/30" [class]="'border-' + theme().neutral + '-800'">
+    <p class="text-xs text-center uppercase tracking-widest opacity-50">
+      AI Command: "Generate a Trap beat" or "Add High Hats"
+    </p>
+  </div>
+</div>

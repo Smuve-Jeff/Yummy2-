@@ -214,9 +214,24 @@ Use COMMAND:::ACTION:::PARAMETER_KEY='value' format for app commands (e.g., COMM
 - NEXT_TRACK: Play next track in playlist.
 - PREVIOUS_TRACK: Play previous track in playlist.
 - TOGGLE_LOOP: Toggle loop for current track.
+
 - GENERATE_IMAGE: Create an image (e.g., prompt='album cover concept').
 - GENERATE_VIDEO: Create a video (e.g., prompt='music video visualizer').
 - ANALYZE_IMAGE: Describe an image (e.g., imageUrl='base64data').
+
+- START_DRUM: Switch to Drum Machine view.
+- GENERATE_BEAT: Create a drum pattern (e.g., style='trap').
+
+- OPEN_LYRICIST: Switch to Lyricist view.
+- SUGGEST_RHYME: Find rhymes for a word (e.g., word='money').
+
+- OPEN_RELEASE_MANAGER: Switch to Release Manager view.
+- GENERATE_RELEASE_PLAN: Create a task list for a song release.
+
+- CREATE_MOCKUP: Switch to Mockup/Merch view (e.g., type='t-shirt' or 'hoodie' or 'vinyl').
+
+- CREATE_VIDEO_SEQUENCE: In Video Editor, add all clips to the timeline sequence.
+
 - FIND_ON_MAP: Search for a location (e.g., query='recording studios in Atlanta').
 - FIND_ARTISTS: Search for collaborators (e.g., location='Nashville', filter='producer').
 - VIEW_ARTIST_PROFILE: Display an artist's detailed profile (e.g., name='BeatMaster Flex', genre='Hip-Hop', location='Atlanta').
