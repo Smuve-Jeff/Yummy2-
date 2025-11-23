@@ -104,7 +104,7 @@ export class AudioVisualizerComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    analyser.getByteFrequencyData(this.dataArray);
+    analyser.getByteFrequencyData(this.dataArray as unknown as Uint8Array<ArrayBuffer>);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
