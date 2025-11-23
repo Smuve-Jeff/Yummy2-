@@ -1,6 +1,7 @@
-import { Component, ChangeDetectionStrategy, signal, OnDestroy, AfterViewInit, input, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, OnDestroy, AfterViewInit, input, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AppTheme } from '../video-editor/app.component'; // Correct path
+import { AppTheme } from '../../models/theme'; // Correct path
+import { MusicDataService } from '../../services/music-data.service';
 
 const BASE_OCTAVE = 3; // Starting MIDI note for C3
 const NUMBER_OF_NOTES_PER_OCTAVE = 12; // C to B
@@ -42,11 +43,14 @@ export class PianoRollComponent implements AfterViewInit, OnDestroy {
 
   // State
   allNotes = ALL_NOTES;
-  bpm = signal(120);
+  defaultBpm = input<number>(120); // NEW: Input for default BPM
+
+  private musicService = inject(MusicDataService);
+  bpm = this.musicService.bpm;
+  sequence = this.musicService.pianoRollSequence;
+
   isPlaying = signal(false);
   currentStep = signal(-1);
-  // Sequence: Map<midi_note_number, boolean[]> where boolean[] is a 16-step array
-  sequence = signal<Map<number, boolean[]>>(new Map());
 
   // Audio
   private audioContext: AudioContext | null = null;
@@ -54,12 +58,15 @@ export class PianoRollComponent implements AfterViewInit, OnDestroy {
   private masterGainNode?: GainNode;
 
   constructor() {
-    this.initializeEmptySequence();
+    // Initialize sequence if empty
+    if (this.sequence().size === 0) {
+        this.initializeEmptySequence();
+    }
+
+    // Effect to update BPM when defaultBpm input changes
     effect(() => {
-      // Re-initialize sequence if notes change (though `allNotes` is static here)
-      // This is a placeholder for potential dynamic note ranges in the future
-      this.initializeEmptySequence();
-    });
+      this.bpm.set(this.defaultBpm());
+    }, { allowSignalWrites: true });
   }
 
   ngAfterViewInit(): void {

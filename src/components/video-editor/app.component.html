@@ -7,6 +7,17 @@
     <header class="flex justify-between items-center p-2 sm:p-4 border-b-2 border-inherit">
       <h1 class="text-xl sm:text-2xl" [class]="mainTextColorClass()">[ AURA ]</h1>
       <div class="flex items-center gap-2">
+        <button (click)="musicDataService.exportProject()" class="p-2 border border-inherit hover:text-black text-sm transition-colors"
+          [class]="mainBorderClass()"
+          [class]="mainHoverBgClass()">
+          <span>[ EXPORT ]</span>
+        </button>
+        <label class="p-2 border border-inherit hover:text-black text-sm transition-colors cursor-pointer"
+          [class]="mainBorderClass()"
+          [class]="mainHoverBgClass()">
+          <span>[ IMPORT ]</span>
+          <input type="file" class="hidden" accept=".json" (change)="handleProjectImport($event)">
+        </label>
         <button (click)="randomizeTheme()" class="p-2 border border-inherit hover:text-black text-sm transition-colors"
           [class]="mainBorderClass()"
           [class]="mainHoverBgClass()">
@@ -26,6 +37,8 @@
           } @else if (mainViewMode() === 'video-editor') {
             <span>[ NETWORKING ]</span>
           } @else if (mainViewMode() === 'networking') {
+            <span>[ MY PROFILE ]</span>
+          } @else if (mainViewMode() === 'user-profile') {
             <span>[ PLAYER ]</span>
           }
         </button>
@@ -190,12 +203,15 @@
                 <span class="text-lg">{{ formatTime(recordingTime()) }}</span>
               </div>
               @if(recordedMixUrl(); as url) {
-                <div class="flex justify-center gap-2 pt-2">
-                  <a [href]="url" download="aura-mix.webm" class="text-sm p-1 border hover:text-black"
+                <div class="flex justify-center gap-2 pt-2 flex-wrap">
+                  <a [href]="url" download="aura-mix.webm" class="text-xs p-1 border hover:text-black"
                     [class]="'border-' + currentTheme().accent + '-500/50'"
-                    [class]="djHoverBgClass">[ DOWNLOAD ]</a>
+                    [class]="djHoverBgClass">[ SAVE WEBM ]</a>
+                  <button (click)="saveAsWav()" class="text-xs p-1 border hover:text-black"
+                    [class]="'border-' + currentTheme().accent + '-500/50'"
+                    [class]="djHoverBgClass">[ SAVE WAV ]</button>
                   @if (canShare()) {
-                    <button (click)="shareMix()" class="text-sm p-1 border hover:text-black"
+                    <button (click)="shareMix()" class="text-xs p-1 border hover:text-black"
                       [class]="'border-' + currentTheme().accent + '-500/50'"
                       [class]="djHoverBgClass">[ SHARE ]</button>
                   }
@@ -358,7 +374,7 @@
         </div>
         }
         @case ('piano-roll') {
-          <app-piano-roll [theme]="currentTheme()"></app-piano-roll>
+          <app-piano-roll [theme]="currentTheme()" [defaultBpm]="userProfileService.getRecommendedBpm()"></app-piano-roll>
         }
         @case ('player') {
         <!-- PLAYER MODE -->
@@ -404,12 +420,27 @@
                 [class]="mainBg90050Class()"
                 [class]="mainHoverBgClass()">[ &gt;&gt; ]</button>
             </div>
-            <div class="flex items-center justify-center gap-4 pt-2">
-                <span class="text-sm" [class]="mainTextColorClass()">VOL:</span>
-                <input type="range" min="0" max="1" step="0.01" [value]="volume()" (input)="onVolumeChange($event)" class="w-1/2 aura-slider">
-                <button (click)="toggleEqPanel()" class="p-2 border text-sm"
-                  [class]="mainBorderClass()"
-                  [class]="mainHoverBgClass()">[EQ]</button>
+            <div class="flex flex-col items-center justify-center gap-2 pt-2">
+                <div class="flex items-center gap-4 w-full justify-center">
+                  <span class="text-sm" [class]="mainTextColorClass()">VOL:</span>
+                  <input type="range" min="0" max="1" step="0.01" [value]="volume()" (input)="onVolumeChange($event)" class="w-1/2 aura-slider">
+                  <button (click)="toggleEqPanel()" class="p-2 border text-sm"
+                    [class]="mainBorderClass()"
+                    [class]="mainHoverBgClass()">[EQ]</button>
+                </div>
+                <!-- Shuffle / Repeat Controls -->
+                <div class="flex gap-2">
+                  <button (click)="musicDataService.shuffle.update(s => !s)" class="p-1 border text-xs"
+                    [class]="mainBorderClass()"
+                    [class]="musicDataService.shuffle() ? 'bg-white text-black' : mainTextColorClass()">
+                    [SHUFFLE]
+                  </button>
+                  <button (click)="musicDataService.repeat.set(musicDataService.repeat() === 'off' ? 'all' : (musicDataService.repeat() === 'all' ? 'one' : 'off'))" class="p-1 border text-xs"
+                    [class]="mainBorderClass()"
+                    [class]="musicDataService.repeat() !== 'off' ? 'bg-white text-black' : mainTextColorClass()">
+                    [REPEAT: {{ musicDataService.repeat() | uppercase }}]
+                  </button>
+                </div>
             </div>
           </div>
 
@@ -440,6 +471,9 @@
                           <div class="flex justify-between items-center mt-1">
                               <p class="text-xs text-green-400/70 truncate pl-2">-- {{ track.artist }}</p>
                               <div class="flex gap-1">
+                                  <a [href]="track.audioSrc" download class="px-1 border text-black flex items-center justify-center"
+                                    [class]="mainBorderClass()"
+                                    [class]="mainHoverBgClass()">[ DL ]</a>
                                   <button (click)="addTrackToPlaylist(track, true)" class="px-1 border text-black"
                                     [class]="mainBorderClass()"
                                     [class]="mainHoverBgClass()">[ PLAY ]</button>
@@ -492,6 +526,9 @@
             [initialSearchQuery]="networkingLocationQuery()"
             [theme]="currentTheme()"
           ></app-networking>
+        }
+        @case ('user-profile') {
+          <app-user-profile [theme]="currentTheme()"></app-user-profile>
         }
       }
     </div>

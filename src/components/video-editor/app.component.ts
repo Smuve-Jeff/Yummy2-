@@ -8,7 +8,12 @@ import { VideoEditorComponent } from './video-editor.component';
 import { AudioVisualizerComponent } from '../audio-visualizer/audio-visualizer.component'; // Corrected import path
 import { PianoRollComponent } from '../piano-roll/piano-roll.component'; // Import PianoRollComponent
 import { NetworkingComponent, ArtistProfile, MOCK_ARTISTS } from '../networking/networking.component'; // NEW: Import NetworkingComponent and types
+import { UserProfileComponent } from '../user-profile/user-profile.component'; // NEW: Import UserProfileComponent
+import { UserProfileService } from '../../services/user-profile.service'; // NEW: Import UserProfileService
+import { MusicDataService } from '../../services/music-data.service'; // NEW: Import MusicDataService
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
+import { AppTheme, THEMES } from '../../models/theme';
+import { encodeWav } from '../../utils/wav-encoder';
 
 // FIX: Augment HTMLAudioElement to include custom __sourceNode property
 declare global {
@@ -78,33 +83,12 @@ type ScratchState = {
   initialTouchY?: number; // NEW
 };
 
-// New: Theme interface and predefined themes
-export interface AppTheme {
-  name: string;
-  primary: string; // Tailwind color name (e.g., 'green', 'amber')
-  accent: string;  // Tailwind color name for DJ mode (e.g., 'amber', 'blue')
-  neutral: string; // Tailwind color name for neutral backgrounds/text (e.g., 'neutral', 'stone')
-  purple: string; // Added for editor themes, though usually generic, using it for specific editors
-  red: string; // Added for editor themes, though usually generic, using it for specific editors
-  blue: string; // NEW: Added for networking theme
-}
-
-const THEMES: AppTheme[] = [
-  { name: 'Green Vintage', primary: 'green', accent: 'amber', neutral: 'neutral', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Blue Retro', primary: 'blue', accent: 'fuchsia', neutral: 'zinc', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Red Glitch', primary: 'red', accent: 'cyan', neutral: 'stone', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Amber Glow', primary: 'amber', accent: 'green', neutral: 'neutral', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Purple Haze', primary: 'purple', accent: 'lime', neutral: 'slate', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Cyan Wave', primary: 'cyan', accent: 'violet', neutral: 'gray', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Yellow Neon', primary: 'yellow', accent: 'red', neutral: 'stone', purple: 'purple', red: 'red', blue: 'blue' },
-];
-
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, NetworkingComponent],
+  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, NetworkingComponent, UserProfileComponent],
   host: {
     // Moved host listeners from @HostListener decorators to the host object
     '(window:mousemove)': 'onScratch($event)',
@@ -121,12 +105,26 @@ export class AppComponent implements OnDestroy {
   fileInputRef = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   // App mode
-  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking'>('player');
+  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking' | 'user-profile'>('player');
   showChatbot = signal(true); // Chatbot is a modal, starts open for initial greeting
 
   // DJ State
-  deckA = signal<DeckState>({ ...initialDeckState });
-  deckB = signal<DeckState>({ ...initialDeckState });
+  // deckA and deckB now come from MusicDataService, but we need to maintain local play state
+  // effectively merging service data (track info) with local audio state (Web Audio nodes)
+  // Actually, for continuous playback, we should probably rely on the service for data,
+  // but the actual PLAYING state is fleeting and tied to the audio engine which lives here in AppComponent (for now).
+  // We will map the Service's signals to our usage or use them directly.
+
+  // To enable persistence, we use the service's signals as the source of truth for TRACKS.
+  // But isPlaying, progress, etc are runtime states.
+  // MusicDataService has deckA and deckB signals. Let's alias them or sync them?
+  // The service stores the entire DeckState including isPlaying.
+  // If we want continuous playback across reloads, saving isPlaying is risky (auto-play noise).
+  // But for navigating VIEWS (not reloads), the Service signal is perfect.
+
+  deckA = this.musicDataService.deckA;
+  deckB = this.musicDataService.deckB;
+
   crossfade = signal(0); // -1 is full A, 1 is full B
   loadingTargetDeck = signal<'A' | 'B' | null>(null);
 
@@ -140,8 +138,8 @@ export class AppComponent implements OnDestroy {
   private readonly SCRATCH_SENSITIVITY = 2.5; // Adjust to control scratch responsiveness
 
   // Player State
-  playlist = signal<Track[]>([]);
-  currentTrackIndex = signal<number>(-1);
+  playlist = this.musicDataService.playlist;
+  currentTrackIndex = this.musicDataService.currentTrackIndex;
   currentPlayerTrack = computed<Track | null>(() => {
     const idx = this.currentTrackIndex();
     const list = this.playlist();
@@ -230,6 +228,11 @@ export class AppComponent implements OnDestroy {
   private destinationNode!: MediaStreamAudioDestinationNode; // FIX: Corrected type name
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
+  // NEW: AudioBuffer recording for WAV export
+  private recordingNode: ScriptProcessorNode | null = null; // Using ScriptProcessor for direct PCM access (deprecated but reliable for this context)
+  private recordingBuffers: Float32Array[][] = [[], []]; // L/R channels
+  private recordingLength = 0;
+
   private recordingIntervalId?: number;
   private vuIntervalId?: number;
 
@@ -254,10 +257,23 @@ export class AppComponent implements OnDestroy {
   showArtistDetailModal = signal(false); // NEW: Controls display of artist detail modal
 
   private aiService = inject(AiService); // Inject AiService
+  public userProfileService = inject(UserProfileService); // Inject UserProfileService
+  public musicDataService = inject(MusicDataService); // Inject MusicDataService
 
   constructor() {
     this.initAudioContext();
     this.initVUAnalysis();
+
+    // Adaptation: Listen for theme preference changes in user profile
+    effect(() => {
+      const profileTheme = this.userProfileService.userProfile().themePreference;
+      if (profileTheme) {
+        const theme = this.THEMES.find(t => t.name.toLowerCase() === profileTheme.toLowerCase());
+        if (theme && theme.name !== this.currentTheme().name) {
+          this.currentTheme.set(theme);
+        }
+      }
+    });
 
     // Listen for changes in isAiAvailable from AiService
     effect(() => {
@@ -406,6 +422,25 @@ export class AppComponent implements OnDestroy {
     this.activeFileInputDeck = deck;
     this.activeFileInputTrackPlayer = (deck === null); // If null, it's for the main player
     this.fileInputRef()!.nativeElement.click();
+  }
+
+  handleProjectImport(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target?.result as string);
+          this.musicDataService.importProjectState(data);
+          console.log('Project imported successfully');
+        } catch (err) {
+          console.error('Error parsing project file', err);
+          alert('Invalid project file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+    (event.target as HTMLInputElement).value = '';
   }
 
   handleFileInput(event: Event): void {
@@ -682,22 +717,20 @@ export class AppComponent implements OnDestroy {
   }
 
   playNext(): void {
-    const list = this.playlist();
-    if (list.length === 0) return;
-
-    const nextIndex = (this.currentTrackIndex() + 1) % list.length;
-    this.playTrackFromPlaylist(nextIndex);
+    const nextIndex = this.musicDataService.getNextTrackIndex();
+    if (nextIndex !== -1) {
+      this.playTrackFromPlaylist(nextIndex);
+    } else {
+      // End of playlist
+      this.deckA.update(d => ({ ...d, isPlaying: false }));
+    }
   }
 
   playPrevious(): void {
-    const list = this.playlist();
-    if (list.length === 0) return;
-
-    let prevIndex = (this.currentTrackIndex() - 1);
-    if (prevIndex < 0) {
-      prevIndex = list.length - 1; // Wrap around to end
+    const prevIndex = this.musicDataService.getPreviousTrackIndex();
+    if (prevIndex !== -1) {
+      this.playTrackFromPlaylist(prevIndex);
     }
-    this.playTrackFromPlaylist(prevIndex);
   }
 
   // --- Global Controls ---
@@ -997,53 +1030,103 @@ export class AppComponent implements OnDestroy {
     if (this.isRecording()) return;
 
     this.recordedChunks = [];
+    this.recordingBuffers = [[], []];
+    this.recordingLength = 0;
     this.recordedMixUrl.set(null);
     this.recordedBlob.set(null);
     this.recordingTime.set(0);
 
     try {
+      // 1. Start MediaRecorder for WebM
       this.mediaRecorder = new MediaRecorder(this.destinationNode.stream, { mimeType: 'audio/webm; codecs=opus' });
-
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           this.recordedChunks.push(event.data);
         }
       };
-
       this.mediaRecorder.onstop = () => {
+        // Fallback blob creation (WebM)
         const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
+        // If WAV data is present, we will overwrite this in saveWav()
         this.recordedBlob.set(blob);
         this.recordedMixUrl.set(URL.createObjectURL(blob));
-        console.log('Master recording stopped. Blob created.');
+
         if (this.recordingIntervalId) clearInterval(this.recordingIntervalId);
         this.recordingIntervalId = undefined;
-      };
 
-      this.mediaRecorder.onerror = (event: any) => {
-        console.error('Master MediaRecorder error:', event.error);
-        // Optionally display error to user
-        this.isRecording.set(false);
-        if (this.recordingIntervalId) clearInterval(this.recordingIntervalId);
-        this.recordingIntervalId = undefined;
+        // Clean up ScriptProcessor
+        if (this.recordingNode) {
+            this.recordingNode.disconnect();
+            this.recordingNode = null;
+        }
       };
-
       this.mediaRecorder.start();
+
+      // 2. Start ScriptProcessor for PCM (WAV)
+      // Capture 4096 frames per buffer
+      this.recordingNode = this.audioContext.createScriptProcessor(4096, 2, 2);
+      this.recordingNode.onaudioprocess = (e) => {
+        if (!this.isRecording()) return;
+        const inputL = e.inputBuffer.getChannelData(0);
+        const inputR = e.inputBuffer.getChannelData(1);
+
+        // Clone data because input buffer is reused
+        this.recordingBuffers[0].push(new Float32Array(inputL));
+        this.recordingBuffers[1].push(new Float32Array(inputR));
+        this.recordingLength += inputL.length;
+      };
+      // Connect master gain to recording node, then to destination (needed for Chrome to fire process)
+      this.gainNodeMaster.connect(this.recordingNode);
+      this.recordingNode.connect(this.audioContext.destination); // Silent connect to keep it alive
+
       this.isRecording.set(true);
       this.recordingIntervalId = window.setInterval(() => this.recordingTime.update(t => t + 1), 1000);
-      console.log('Master recording started.');
+      console.log('Master recording started (WebM + WAV buffering).');
     } catch (e: any) {
-      console.error('Error starting Master MediaRecorder:', e);
-      // Optionally display error to user
+      console.error('Error starting recording:', e);
       this.isRecording.set(false);
     }
   }
 
   stopMasterRecording(): void {
-    if (this.mediaRecorder && this.isRecording()) {
-      this.mediaRecorder.stop();
+    if (this.isRecording()) {
+      if (this.mediaRecorder) this.mediaRecorder.stop();
+      // Recording node disconnect happens in onstop callback of MediaRecorder to sync
       this.isRecording.set(false);
-      console.log('Attempting to stop master recording...');
+      console.log('Stopping master recording...');
     }
+  }
+
+  saveAsWav(): void {
+    if (this.recordingLength === 0) {
+        alert('No audio recorded for WAV export.');
+        return;
+    }
+
+    // Flatten recording buffers
+    const buffer = this.audioContext.createBuffer(2, this.recordingLength, this.audioContext.sampleRate);
+    const chL = buffer.getChannelData(0);
+    const chR = buffer.getChannelData(1);
+
+    let offset = 0;
+    for (const chunk of this.recordingBuffers[0]) {
+        chL.set(chunk, offset);
+        offset += chunk.length;
+    }
+    offset = 0;
+    for (const chunk of this.recordingBuffers[1]) {
+        chR.set(chunk, offset);
+        offset += chunk.length;
+    }
+
+    const wavBlob = encodeWav(buffer);
+    const url = URL.createObjectURL(wavBlob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aura-recording-${new Date().toISOString().slice(0, 19)}.wav`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async shareMix(): Promise<void> {
@@ -1182,12 +1265,13 @@ export class AppComponent implements OnDestroy {
 
   // --- App Mode Management ---
   toggleMainViewMode(): void {
-    const modes = ['player', 'dj', 'piano-roll', 'image-editor', 'video-editor', 'networking']; // NEW: Add 'networking'
+    const modes = ['player', 'dj', 'piano-roll', 'image-editor', 'video-editor', 'networking', 'user-profile']; // NEW: Add 'user-profile'
     const currentMode = this.mainViewMode();
     const currentIndex = modes.indexOf(currentMode);
     const nextIndex = (currentIndex + 1) % modes.length;
     this.mainViewMode.set(modes[nextIndex] as any);
-    this.stopAllAudio(); // Stop audio when switching modes
+    // Removed this.stopAllAudio() to allow continuous playback!
+
     // Reset specific states when switching modes
     if (modes[nextIndex] !== 'image-editor') {
       this.imageEditorInitialPrompt.set('');
@@ -1343,6 +1427,29 @@ export class AppComponent implements OnDestroy {
             // Optionally send a message back to chatbot that artist was not found
           }
         }
+        break;
+      case 'DIAGNOSE_TRACK':
+        const profile = this.userProfileService.userProfile();
+        const currentMode = this.mainViewMode();
+        const bpm = 120; // We need to access this from PianoRoll or Deck, for now hardcode or infer
+        // Gathers state to send back to S.M.U.V.E
+        const diagnosticData = {
+          mode: currentMode,
+          artistName: profile.name,
+          artistGenre: profile.genre,
+          bpm: bpm, // In a real scenario, we'd pull this from the active component
+          isPlaying: this.deckA().isPlaying || this.deckB().isPlaying,
+          volume: this.volume()
+        };
+
+        // We need to feed this back to the AI.
+        // Since handleChatbotCommand is called BY the AI, we can't easily "return" it in this async flow
+        // unless we trigger a new message TO the AI.
+        // For now, we'll console log it, and in a real implementation, we'd push a system message to the chat history.
+        console.log('S.M.U.V.E DIAGNOSTIC DATA:', diagnosticData);
+
+        // If we want the chatbot to react immediately, we might need to expose a method on the Chatbot component
+        // to "inject" a system prompt response.
         break;
       default:
         console.warn(`Unknown chatbot command: ${action}`);
