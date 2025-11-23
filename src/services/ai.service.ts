@@ -220,6 +220,13 @@ Use COMMAND:::ACTION:::PARAMETER_KEY='value' format for app commands (e.g., COMM
 - FIND_ON_MAP: Search for a location (e.g., query='recording studios in Atlanta').
 - FIND_ARTISTS: Search for collaborators (e.g., location='Nashville', filter='producer').
 - VIEW_ARTIST_PROFILE: Display an artist's detailed profile (e.g., name='BeatMaster Flex', genre='Hip-Hop', location='Atlanta').
+- START_DRUM: Start the drum machine playback.
+- STOP_DRUM: Stop the drum machine playback.
+- SET_BPM: Set the drum machine BPM (e.g., bpm='140').
+- CLEAR_BEAT: Clear the current drum pattern.
+- GENERATE_BEAT: Generate a drum pattern. The pattern parameter should be a JSON string where keys are track names (kick, snare, hihat, clap, tom, crash, perc, 808) and values are arrays of step indices (0-15). Example: pattern='{"kick": [0, 4, 8, 12], "snare": [4, 12], "hihat": [0, 2, 4, 6, 8, 10, 12, 14]}'.
+- TOGGLE_TRACK_MUTE: Mute/Unmute a drum track (e.g., track='kick').
+- TOGGLE_TRACK_SOLO: Solo/Unsolo a drum track (e.g., track='snare').
 
 When VIEW_ARTIST_PROFILE is used, expect a command containing an artist's name (and optional genre/location for disambiguation). Query your knowledge base (and implicitly, the MOCK_ARTISTS data provided in the app context) to provide an adaptive, detailed insight into their profile. This should include:
 - Strengths (musicality, production, stage presence, lyrical ability etc.)

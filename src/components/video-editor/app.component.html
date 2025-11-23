@@ -20,6 +20,8 @@
           } @else if (mainViewMode() === 'dj') {
             <span>[ PIANO EDITOR ]</span>
           } @else if (mainViewMode() === 'piano-roll') {
+            <span>[ DRUM MACHINE ]</span>
+          } @else if (mainViewMode() === 'drum-machine') {
             <span>[ IMAGE EDITOR ]</span>
           } @else if (mainViewMode() === 'image-editor') {
             <span>[ VIDEO EDITOR ]</span>
@@ -359,6 +361,9 @@
         }
         @case ('piano-roll') {
           <app-piano-roll [theme]="currentTheme()"></app-piano-roll>
+        }
+        @case ('drum-machine') {
+          <app-drum-machine [theme]="currentTheme()"></app-drum-machine>
         }
         @case ('player') {
         <!-- PLAYER MODE -->
