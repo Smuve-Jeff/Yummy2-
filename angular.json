@@ -21,12 +21,10 @@
           },
           "configurations": {
             "production": {
-              "outputHashing": "all",
-              "baseHref": "/Yummy2-/"
+              "outputHashing": "all"
             },
             "development": {
               "optimization": false,
-              "baseHref": "/Yummy2-/",
               "extractLicenses": false,
               "sourceMap": true
             }
