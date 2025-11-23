@@ -1,7 +1,7 @@
 {
-  "name": "Aura Music Player",
-  "short_name": "Aura",
-  "start_url": ".",
+  "name": "S.M.U.V.E. AI Chatbot Music Manager",
+  "short_name": "S.M.U.V.E.",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#4ade80",
