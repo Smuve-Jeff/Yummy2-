@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aura-music-cache-v1';
+const CACHE_NAME = 'smuve-music-cache-v2';
 const URLS_TO_CACHE = [
   './',
   './index.html',
