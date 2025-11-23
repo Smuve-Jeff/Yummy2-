@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    base: '/smuve_4.5/',
+    base: '/Yummy2-/',
     define: {
       'process.env': {
         API_KEY: JSON.stringify(env.API_KEY || '')
