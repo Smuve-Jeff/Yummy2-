@@ -8,6 +8,9 @@ import { VideoEditorComponent } from './video-editor.component';
 import { AudioVisualizerComponent } from '../audio-visualizer/audio-visualizer.component'; // Corrected import path
 import { PianoRollComponent } from '../piano-roll/piano-roll.component'; // Import PianoRollComponent
 import { NetworkingComponent, ArtistProfile, MOCK_ARTISTS } from '../networking/networking.component'; // NEW: Import NetworkingComponent and types
+import { DrumMachineComponent } from '../drum-machine/drum-machine.component'; // NEW
+import { LyricistComponent } from '../lyricist/lyricist.component'; // NEW
+import { ReleaseManagerComponent } from '../release-manager/release-manager.component'; // NEW
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
 
 // FIX: Augment HTMLAudioElement to include custom __sourceNode property
@@ -104,7 +107,7 @@ const THEMES: AppTheme[] = [
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, NetworkingComponent],
+  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, NetworkingComponent, DrumMachineComponent, LyricistComponent, ReleaseManagerComponent],
   host: {
     // Moved host listeners from @HostListener decorators to the host object
     '(window:mousemove)': 'onScratch($event)',
@@ -120,8 +123,16 @@ export class AppComponent implements OnDestroy {
   videoPlayerBRef = viewChild<ElementRef<HTMLVideoElement>>('videoPlayerB');
   fileInputRef = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
+  // NEW: References to child components for AI command delegation
+  drumMachineRef = viewChild(DrumMachineComponent);
+  imageEditorRef = viewChild(ImageEditorComponent);
+  videoEditorRef = viewChild(VideoEditorComponent);
+  lyricistRef = viewChild(LyricistComponent);
+  releaseManagerRef = viewChild(ReleaseManagerComponent);
+
+
   // App mode
-  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking'>('player');
+  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking' | 'drum-machine' | 'lyricist' | 'release-manager'>('player');
   showChatbot = signal(true); // Chatbot is a modal, starts open for initial greeting
 
   // DJ State
@@ -1182,32 +1193,37 @@ export class AppComponent implements OnDestroy {
 
   // --- App Mode Management ---
   toggleMainViewMode(): void {
-    const modes = ['player', 'dj', 'piano-roll', 'image-editor', 'video-editor', 'networking']; // NEW: Add 'networking'
+    const modes = ['player', 'dj', 'piano-roll', 'drum-machine', 'image-editor', 'video-editor', 'lyricist', 'release-manager', 'networking'];
     const currentMode = this.mainViewMode();
     const currentIndex = modes.indexOf(currentMode);
     const nextIndex = (currentIndex + 1) % modes.length;
-    this.mainViewMode.set(modes[nextIndex] as any);
-    this.stopAllAudio(); // Stop audio when switching modes
-    // Reset specific states when switching modes
-    if (modes[nextIndex] !== 'image-editor') {
-      this.imageEditorInitialPrompt.set('');
-    }
-    if (modes[nextIndex] !== 'video-editor') {
-      this.videoEditorInitialPrompt.set('');
-    }
-    if (modes[nextIndex] !== 'networking') { // NEW: Clear networking query
-      this.networkingLocationQuery.set(null);
-      this.selectedArtistProfile.set(null);
-    }
-    this.lastImageEditorImageUrl.set(null); // Clear image for video generation
+    this.setMode(modes[nextIndex] as any);
+  }
 
-    // If switching to DJ mode, ensure tracks are connected for VU/crossfade
-    if (modes[nextIndex] === 'dj') {
-      this.audioPlayerARef()?.nativeElement.load(); // Reload to ensure Web Audio connection
-      this.audioPlayerBRef()?.nativeElement.load();
-      if (this.deckA().isPlaying) this.togglePlayPause('A'); // Restart if it was playing
-      if (this.deckB().isPlaying) this.togglePlayPause('B'); // Restart if it was playing
-    }
+  setMode(mode: 'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking' | 'drum-machine' | 'lyricist' | 'release-manager') {
+      this.mainViewMode.set(mode);
+      this.stopAllAudio();
+
+      // Reset specific states when switching modes
+      if (mode !== 'image-editor') {
+        this.imageEditorInitialPrompt.set('');
+      }
+      if (mode !== 'video-editor') {
+        this.videoEditorInitialPrompt.set('');
+      }
+      if (mode !== 'networking') {
+        this.networkingLocationQuery.set(null);
+        this.selectedArtistProfile.set(null);
+      }
+      this.lastImageEditorImageUrl.set(null);
+
+      // If switching to DJ mode, ensure tracks are connected for VU/crossfade
+      if (mode === 'dj') {
+        this.audioPlayerARef()?.nativeElement.load();
+        this.audioPlayerBRef()?.nativeElement.load();
+        if (this.deckA().isPlaying) this.togglePlayPause('A');
+        if (this.deckB().isPlaying) this.togglePlayPause('B');
+      }
   }
 
   toggleChatbot(): void {
@@ -1237,9 +1253,6 @@ export class AppComponent implements OnDestroy {
         const newTheme = this.THEMES.find(t => t.name.toLowerCase() === themeName.toLowerCase());
         if (newTheme) {
           this.currentTheme.set(newTheme);
-          console.log(`Theme set to: ${newTheme.name}`);
-        } else {
-          console.warn(`Theme "${themeName}" not found.`);
         }
         break;
       case 'PLAY_TRACK':
@@ -1255,8 +1268,6 @@ export class AppComponent implements OnDestroy {
             } else { // Add to playlist and play
               this.addTrackToPlaylist(trackToPlay, true);
             }
-          } else {
-            console.warn(`Track with title "${parameters.title}" not found.`);
           }
         }
         break;
@@ -1285,10 +1296,57 @@ export class AppComponent implements OnDestroy {
       case 'TOGGLE_LOOP':
         this.toggleLoop('A'); // Assuming loop applies to player track on deck A
         break;
-      case 'LOAD_TRACK':
-        // This command might need more complex parameters (e.g., URL or search query)
-        console.warn('LOAD_TRACK command not fully implemented for chatbot direct loading.');
-        break;
+
+      // NEW COMMANDS FOR APP UPGRADE
+      case 'START_DRUM':
+          this.setMode('drum-machine');
+          this.showChatbot.set(false);
+          break;
+      case 'GENERATE_BEAT':
+          this.setMode('drum-machine');
+          this.showChatbot.set(false);
+          // Wait a tick for view to init
+          setTimeout(() => {
+              this.drumMachineRef()?.handleAiBeat(parameters.style || 'trap');
+          }, 100);
+          break;
+      case 'OPEN_LYRICIST':
+          this.setMode('lyricist');
+          this.showChatbot.set(false);
+          break;
+      case 'SUGGEST_RHYME':
+          this.setMode('lyricist');
+          this.showChatbot.set(false);
+          setTimeout(() => {
+              if (parameters.word) this.lyricistRef()?.generateRhyme(parameters.word);
+          }, 100);
+          break;
+      case 'OPEN_RELEASE_MANAGER':
+          this.setMode('release-manager');
+          this.showChatbot.set(false);
+          break;
+      case 'GENERATE_RELEASE_PLAN':
+          this.setMode('release-manager');
+          this.showChatbot.set(false);
+          setTimeout(() => {
+              this.releaseManagerRef()?.generatePlan();
+          }, 100);
+          break;
+      case 'CREATE_MOCKUP':
+          this.mainViewMode.set('image-editor');
+          this.showChatbot.set(false);
+          setTimeout(() => {
+              this.imageEditorRef()?.createMockup(parameters.type || 't-shirt');
+          }, 100);
+          break;
+      case 'CREATE_VIDEO_SEQUENCE':
+          this.mainViewMode.set('video-editor');
+          this.showChatbot.set(false);
+          setTimeout(() => {
+              this.videoEditorRef()?.createSequenceFromAll();
+          }, 100);
+          break;
+
       case 'GENERATE_IMAGE':
         if (parameters.prompt) {
           this.imageEditorInitialPrompt.set(parameters.prompt);
@@ -1400,15 +1458,10 @@ export class AppComponent implements OnDestroy {
     this.deckB.update(state => ({ ...state, isPlaying: false, progress: 0 }));
 
     this.stopMicrophone(); // Ensure microphone is stopped
-  }
 
-  private stopMediaStream(): void {
-    if (this.micStream) {
-      this.micStream.getTracks().forEach(track => track.stop());
-      this.micStream = null;
-    }
+    // Also stop drum machine if running
+    this.drumMachineRef()?.stop();
   }
-
 
   formatTime(seconds: number): string {
     if (isNaN(seconds) || seconds < 0) return '00:00';

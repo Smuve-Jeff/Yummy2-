@@ -3,13 +3,21 @@
   [class]="'text-' + theme().neutral + '-200'"
   [class]="'bg-' + theme().purple + '-900/50'"
   [class]="'border border-' + theme().purple + '-500/30'">
-  <h2 class="text-center text-lg" [class]="'text-' + theme().purple + '-400'">[ AURA IMAGE LAB ]</h2>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow">
+  <div class="flex justify-between items-center">
+      <h2 class="text-lg" [class]="'text-' + theme().purple + '-400'">[ AURA IMAGE LAB ]</h2>
+      <div class="flex gap-2 text-xs uppercase">
+          <button (click)="viewMode.set('generate')" [class.text-white]="viewMode() === 'generate'" class="opacity-70 hover:opacity-100">[ Generator ]</button>
+          <button (click)="viewMode.set('mockup')" [class.text-white]="viewMode() === 'mockup'" class="opacity-70 hover:opacity-100">[ Merch Mockup ]</button>
+      </div>
+  </div>
+
+  <!-- Generator View -->
+  <div *ngIf="viewMode() === 'generate'" class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow">
     <!-- Image Upload & Prompt -->
     <div class="flex flex-col gap-4 p-4"
       [class]="'border border-' + theme().purple + '-500/20'">
-      <h3 class="text-base" [class]="'text-' + theme().purple + '-300'">// ORIGINAL IMAGE (FOR CONTEXT)</h3>
+      <h3 class="text-base" [class]="'text-' + theme().purple + '-300'">// INPUT</h3>
       <div class="flex-grow flex items-center justify-center border-2 border-dashed p-2 min-h-[200px] overflow-hidden"
         [class]="'border-' + theme().purple + '-700/50'">
         @if (originalImageUrl()) {
@@ -26,11 +34,11 @@
         <input type="file" #fileInput (change)="handleImageUpload($event)" accept="image/*" class="hidden">
       </label>
 
-      <label for="edit-prompt" class="block text-sm" [class]="'text-' + theme().purple + '-300'">GENERATION PROMPT:</label>
+      <label for="edit-prompt" class="block text-sm" [class]="'text-' + theme().purple + '-300'">PROMPT:</label>
       <textarea id="edit-prompt"
         [value]="editPrompt()"
         (input)="editPrompt.set($event.target.value)"
-        placeholder="e.g., 'A retro-futuristic album cover with glowing elements', 'A sci-fi landscape art with vibrant colors'"
+        placeholder="e.g., 'A retro-futuristic album cover with glowing elements'"
         rows="4"
         class="w-full p-2 text-sm focus:ring-500 resize-y"
         [class]="'bg-' + theme().purple + '-800/50'"
@@ -83,15 +91,12 @@
       @if (errorMessage()) {
         <p class="text-red-500 text-sm mt-2 text-center">{{ errorMessage() }}</p>
       }
-      @if (!isAiAvailable()) {
-        <p class="text-red-500 text-sm mt-2 text-center">AI features are disabled due to an invalid API key.</p>
-      }
     </div>
 
     <!-- Generated Images -->
     <div class="flex flex-col gap-4 p-4"
       [class]="'border border-' + theme().purple + '-500/20'">
-      <h3 class="text-base" [class]="'text-' + theme().purple + '-300'">// GENERATED IMAGE</h3>
+      <h3 class="text-base" [class]="'text-' + theme().purple + '-300'">// OUTPUT</h3>
       <div class="flex-grow flex items-center justify-center border-2 border-dashed p-2 min-h-[200px] overflow-hidden"
         [class]="'border-' + theme().purple + '-700/50'">
         @if (generatedImageUrls().length > 0) {
@@ -104,40 +109,111 @@
           <span class="text-sm" [class]="'text-' + theme().neutral + '-500'">[ No image generated yet ]</span>
         }
       </div>
+
+      <!-- Actions -->
       @if (generatedImageUrls().length > 0) {
-        <button (click)="useAsAlbumArt()"
-           class="w-full text-center px-4 py-2 border-2 hover:text-black text-lg mb-2"
-           [class]="'border-' + theme().purple + '-500'"
-           [class]="'bg-' + theme().purple + '-800'"
-           [class]="'text-' + theme().purple + '-300'"
-           [class]="'hover:bg-' + theme().purple + '-500'"
-           [disabled]="!isAiAvailable()">
-           [ USE AS ALBUM ART ]
-        </button>
-      }
-      @if (generatedImageUrls().length > 0) {
-        <button (click)="requestImageAnalysis()"
-           class="w-full text-center px-4 py-2 border-2 hover:text-black text-lg mb-2"
-           [class]="'border-' + theme().purple + '-500'"
-           [class]="'bg-' + theme().purple + '-800'"
-           [class]="'text-' + theme().purple + '-300'"
-           [class]="'hover:bg-' + theme().purple + '-500'"
-           [disabled]="!isAiAvailable()">
-           [ ANALYZE IMAGE ]
-        </button>
-      }
-      @if (generatedImageUrls().length > 0) {
-        <a [href]="generatedImageUrls()[0]" download="aura-edited-image.png"
-           class="w-full text-center px-4 py-2 border-2 hover:text-black text-lg"
-           [class]="'border-' + theme().purple + '-500'"
-           [class]="'bg-' + theme().purple + '-800'"
-           [class]="'text-' + theme().purple + '-300'"
-           [class]="'hover:bg-' + theme().purple + '-500'"
-           [class.opacity-50]="!isAiAvailable()"
-           [attr.disabled]="!isAiAvailable() ? true : null">
-           [ DOWNLOAD ]
-        </a>
+        <div class="flex flex-col gap-2">
+            <button (click)="useAsAlbumArt()"
+               class="w-full text-center px-4 py-2 border hover:text-black text-sm transition-colors"
+               [class]="'border-' + theme().purple + '-500 bg-' + theme().purple + '-800/20 text-' + theme().purple + '-300 hover:bg-' + theme().purple + '-500'">
+               [ USE AS ALBUM ART ]
+            </button>
+            <button (click)="requestImageAnalysis()"
+               class="w-full text-center px-4 py-2 border hover:text-black text-sm transition-colors"
+               [class]="'border-' + theme().purple + '-500 bg-' + theme().purple + '-800/20 text-' + theme().purple + '-300 hover:bg-' + theme().purple + '-500'">
+               [ ANALYZE WITH AI ]
+            </button>
+            <button (click)="viewMode.set('mockup')"
+               class="w-full text-center px-4 py-2 border hover:text-black text-sm transition-colors"
+               [class]="'border-' + theme().purple + '-500 bg-' + theme().purple + '-800/20 text-' + theme().purple + '-300 hover:bg-' + theme().purple + '-500'">
+               [ CREATE MOCKUP ]
+            </button>
+            <a [href]="generatedImageUrls()[0]" download="aura-image.png"
+               class="w-full text-center px-4 py-2 border hover:text-black text-sm transition-colors"
+               [class]="'border-' + theme().neutral + '-500 text-' + theme().neutral + '-400 hover:bg-' + theme().neutral + '-500'">
+               [ DOWNLOAD ]
+            </a>
+        </div>
       }
     </div>
   </div>
+
+  <!-- Mockup View -->
+  <div *ngIf="viewMode() === 'mockup'" class="flex-grow flex flex-col md:flex-row gap-4 p-4">
+      <!-- Controls -->
+      <div class="w-full md:w-64 flex flex-col gap-4">
+          <h3 class="text-base" [class]="'text-' + theme().purple + '-300'">// MOCKUP TYPE</h3>
+          <div class="flex flex-col gap-2">
+              <button *ngFor="let type of ['t-shirt', 'hoodie', 'vinyl']"
+                      (click)="currentMockupType.set(type)"
+                      class="px-4 py-3 text-left border transition-colors uppercase text-sm font-bold"
+                      [class]="currentMockupType() === type ? 'bg-' + theme().purple + '-500 text-black border-' + theme().purple + '-500' : 'border-' + theme().purple + '-500/30 hover:border-' + theme().purple + '-500'">
+                  {{ type }}
+              </button>
+          </div>
+
+          <div class="mt-auto p-4 border border-white/10 rounded text-xs opacity-60">
+              <p>Previewing: {{ getCurrentImage() ? 'Current Image' : 'No Image' }}</p>
+          </div>
+      </div>
+
+      <!-- Preview Area -->
+      <div class="flex-1 flex items-center justify-center border-2 border-dashed bg-black/20 relative overflow-hidden"
+           [class]="'border-' + theme().purple + '-700/50'">
+
+           <!-- T-SHIRT TEMPLATE -->
+           <div *ngIf="currentMockupType() === 't-shirt'" class="relative w-80 h-96 bg-gray-800 mask-tshirt shadow-2xl flex items-center justify-center overflow-hidden">
+               <!-- Basic CSS T-Shirt Shape Simulation -->
+               <div class="absolute inset-0 bg-neutral-900"></div>
+               <!-- Collar -->
+               <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-8 bg-neutral-800 rounded-b-full border-b border-neutral-700"></div>
+               <!-- Sleeves visual trick -->
+               <div class="absolute top-0 left-0 w-8 h-32 bg-neutral-900 -rotate-12 origin-top-right"></div>
+               <div class="absolute top-0 right-0 w-8 h-32 bg-neutral-900 rotate-12 origin-top-left"></div>
+
+               <!-- Design Overlay -->
+               <img *ngIf="getCurrentImage()" [src]="getCurrentImage()"
+                    class="relative w-40 h-40 object-cover mix-blend-overlay opacity-90"
+                    style="mask-image: linear-gradient(black, black);">
+
+               <div *ngIf="!getCurrentImage()" class="relative text-xs opacity-30 text-white">[ NO DESIGN ]</div>
+           </div>
+
+           <!-- HOODIE TEMPLATE -->
+           <div *ngIf="currentMockupType() === 'hoodie'" class="relative w-80 h-96 bg-gray-800 shadow-2xl flex items-center justify-center overflow-hidden rounded-t-3xl">
+               <div class="absolute inset-0 bg-neutral-800"></div>
+               <!-- Hood -->
+               <div class="absolute top-4 left-1/2 -translate-x-1/2 w-40 h-20 bg-neutral-900 rounded-full blur-sm"></div>
+               <!-- Pocket -->
+               <div class="absolute bottom-10 left-1/2 -translate-x-1/2 w-48 h-24 bg-neutral-900 rounded-t-xl opacity-50"></div>
+
+               <!-- Design -->
+               <img *ngIf="getCurrentImage()" [src]="getCurrentImage()"
+                    class="relative w-48 h-48 object-cover mix-blend-hard-light mb-12">
+           </div>
+
+           <!-- VINYL TEMPLATE -->
+           <div *ngIf="currentMockupType() === 'vinyl'" class="relative w-80 h-80 shadow-2xl flex items-center justify-center group">
+               <!-- Record Sleeve -->
+               <div class="absolute inset-0 bg-white shadow-xl z-10 transition-transform duration-500 group-hover:-translate-x-12">
+                   <img *ngIf="getCurrentImage()" [src]="getCurrentImage()" class="w-full h-full object-cover">
+                   <div *ngIf="!getCurrentImage()" class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-xs">[ ARTWORK ]</div>
+               </div>
+
+               <!-- Vinyl Disc -->
+               <div class="absolute inset-0 rounded-full bg-black flex items-center justify-center transition-transform duration-500 group-hover:translate-x-12 group-hover:rotate-180">
+                   <!-- Grooves -->
+                   <div class="absolute inset-2 rounded-full border-4 border-gray-800 opacity-50"></div>
+                   <div class="absolute inset-8 rounded-full border-4 border-gray-800 opacity-50"></div>
+                   <div class="absolute inset-16 rounded-full border-4 border-gray-800 opacity-50"></div>
+                   <!-- Label -->
+                   <div class="w-24 h-24 rounded-full bg-red-600 border-4 border-black flex items-center justify-center overflow-hidden">
+                       <span class="text-[8px] text-white text-center leading-tight">SIDE A<br>AURA</span>
+                   </div>
+               </div>
+           </div>
+
+      </div>
+  </div>
+
 </div>

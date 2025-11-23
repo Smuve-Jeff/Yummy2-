@@ -2,8 +2,15 @@ import { Component, ChangeDetectionStrategy, signal, ElementRef, viewChild, OnDe
 import { CommonModule } from '@angular/common';
 // FIX: Imported types from AiService for full static import compatibility
 import type { GoogleGenAI, GenerateVideosParameters, GenerateVideosOperation, GenerateVideosResponse } from '../../services/ai.service';
-import { AppTheme } from './app.component';
+import { AppTheme } from '../video-editor/app.component';
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
+
+export interface VideoClip {
+    id: string;
+    url: string;
+    name: string;
+    type: 'generated' | 'recorded';
+}
 
 @Component({
   selector: 'app-video-editor',
@@ -34,6 +41,12 @@ export class VideoEditorComponent implements OnDestroy {
   generationProgressMessage = signal<string | null>(null);
   aspectRatio = signal<'1:1' | '3:4' | '4:3' | '9:16' | '16:9'>('16:9'); // NEW: Aspect ratio signal
 
+  // Clip Management
+  clips = signal<VideoClip[]>([]);
+  sequencerClips = signal<VideoClip[]>([]);
+  isPlayingSequence = signal(false);
+  currentSequenceIndex = signal(-1);
+
   private aiService = inject(AiService); // NEW: Inject AiService
   isAiAvailable = computed(() => this.aiService.isAiAvailable);
 
@@ -43,6 +56,7 @@ export class VideoEditorComponent implements OnDestroy {
   // View children
   liveVideoPreviewRef = viewChild<ElementRef<HTMLVideoElement>>('liveVideoPreview');
   recordedVideoPlayerRef = viewChild<ElementRef<HTMLVideoElement>>('recordedVideoPlayer');
+  sequencePlayerRef = viewChild<ElementRef<HTMLVideoElement>>('sequencePlayer');
 
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
@@ -144,7 +158,12 @@ export class VideoEditorComponent implements OnDestroy {
       this.mediaRecorder.onstop = () => {
         const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
         this.recordedVideoBlob.set(blob);
-        this.recordedVideoUrl.set(URL.createObjectURL(blob));
+        const url = URL.createObjectURL(blob);
+        this.recordedVideoUrl.set(url);
+
+        // Add to clips
+        this.addClip(url, `Recording ${this.clips().length + 1}`, 'recorded');
+
         console.log('Recording stopped. Blob created.');
         if (this.recordingIntervalId) clearInterval(this.recordingIntervalId);
         this.recordingIntervalId = undefined;
@@ -247,7 +266,9 @@ export class VideoEditorComponent implements OnDestroy {
       const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
       if (downloadLink) {
         // The API key must be appended when fetching from the download link.
-        this.generatedVideoUrl.set(`${downloadLink}&key=${this.aiService.getApiKey()}`);
+        const fullUrl = `${downloadLink}&key=${this.aiService.getApiKey()}`;
+        this.generatedVideoUrl.set(fullUrl);
+        this.addClip(fullUrl, `AI Video ${this.clips().length + 1}`, 'generated');
         this.generationProgressMessage.set('Video generation complete!');
       } else {
         this.error.set('Video generation failed: No download link in response.');
@@ -261,6 +282,68 @@ export class VideoEditorComponent implements OnDestroy {
       this.isGeneratingVideo.set(false);
     }
   }
+
+  // --- Clip Management & Sequencer ---
+
+  addClip(url: string, name: string, type: 'generated' | 'recorded') {
+      const clip: VideoClip = { id: Date.now().toString() + Math.random(), url, name, type };
+      this.clips.update(c => [...c, clip]);
+  }
+
+  addToSequence(clip: VideoClip) {
+      this.sequencerClips.update(s => [...s, clip]);
+  }
+
+  removeFromSequence(index: number) {
+      this.sequencerClips.update(s => s.filter((_, i) => i !== index));
+  }
+
+  playSequence() {
+      if (this.sequencerClips().length === 0) return;
+      this.isPlayingSequence.set(true);
+      this.currentSequenceIndex.set(0);
+      this.playCurrentSequenceClip();
+  }
+
+  private playCurrentSequenceClip() {
+      const idx = this.currentSequenceIndex();
+      const clips = this.sequencerClips();
+
+      if (idx >= clips.length) {
+          this.isPlayingSequence.set(false);
+          this.currentSequenceIndex.set(-1);
+          return;
+      }
+
+      const clip = clips[idx];
+      const player = this.sequencePlayerRef()?.nativeElement;
+      if (player) {
+          player.src = clip.url;
+          player.load();
+          player.play().catch(e => console.error(e));
+
+          player.onended = () => {
+              this.currentSequenceIndex.update(i => i + 1);
+              this.playCurrentSequenceClip();
+          };
+      }
+  }
+
+  stopSequence() {
+      this.isPlayingSequence.set(false);
+      const player = this.sequencePlayerRef()?.nativeElement;
+      if (player) {
+          player.pause();
+          player.currentTime = 0;
+      }
+  }
+
+  // AI Command Handler for sequencer
+  createSequenceFromAll() {
+      this.sequencerClips.set([...this.clips()]);
+      alert('Added all clips to sequence!');
+  }
+
 
   formatTime(seconds: number): string {
     if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -282,5 +365,7 @@ export class VideoEditorComponent implements OnDestroy {
     this.generationProgressMessage.set(null);
     this.aspectRatio.set('16:9');
     this.error.set(null);
+
+    // Clear Clips? Maybe optional. For now keep clips.
   }
 }
