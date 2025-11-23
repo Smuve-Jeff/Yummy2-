@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "ng serve",
+    "dev": "vite",
+    "ng-serve": "ng serve",
     "build": "ng build",
-    "preview": "ng serve --configuration=production"
+    "preview": "vite preview"
   },
   "dependencies": {
     "rxjs": "^7.8.2",
