@@ -177,7 +177,36 @@
             </div>
             <!-- Recording Section -->
             <div class="p-2 space-y-2 text-center" [class]="djBorderClass">
-              <h3 class="text-sm">[ RECORDING ]</h3>
+              <h3 class="text-sm flex justify-between px-2">
+                <span>[ RECORDING ]</span>
+                @if(midiConnected()) {
+                  <span class="text-[10px] text-green-500 animate-pulse" [title]="midiDeviceName()">[ MIDI: ON ]</span>
+                }
+              </h3>
+
+              <!-- Format & Source Selection -->
+              <div class="flex flex-col gap-2 text-xs mb-2">
+                <div class="flex justify-between items-center">
+                  <span>FORMAT:</span>
+                  <div class="flex gap-1">
+                    <button (click)="recordingFormat.set('webm')" class="px-2 py-0.5 border"
+                      [class]="recordingFormat() === 'webm' ? djActiveBgClass() + ' text-black' : djBorderClass()">WEBM</button>
+                    <button (click)="recordingFormat.set('wav')" class="px-2 py-0.5 border"
+                      [class]="recordingFormat() === 'wav' ? djActiveBgClass() + ' text-black' : djBorderClass()">WAV</button>
+                  </div>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span>SOURCE:</span>
+                  <select [value]="recordingSource()" (change)="onRecordingSourceChange($any($event.target).value)" class="bg-black border text-xs p-1 w-24"
+                    [class]="'border-' + currentTheme().accent + '-500/50 text-' + currentTheme().accent + '-400'">
+                    <option value="master">MASTER</option>
+                    <option value="mic">MIC ONLY</option>
+                    <option value="deckA">DECK A</option>
+                    <option value="deckB">DECK B</option>
+                  </select>
+                </div>
+              </div>
+
               <div class="flex justify-center items-center gap-4">
                 <button (click)="toggleRecording()" class="px-3 py-1 border hover:text-black"
                   [class]="'border-' + currentTheme().accent + '-500/50'"
@@ -189,11 +218,21 @@
                 </button>
                 <span class="text-lg">{{ formatTime(recordingTime()) }}</span>
               </div>
+
+              <!-- Recording Visualizer -->
+              @if (isRecording()) {
+                <div class="h-8 w-full bg-black/50 relative overflow-hidden mt-2">
+                   <!-- Simple visual indication that recording is happening -->
+                   <div class="absolute inset-0 bg-red-900/20 animate-pulse"></div>
+                   <div class="absolute bottom-0 left-0 h-full bg-red-500/50 transition-all duration-100" [style.width.%]="(vuLevelMaster() * 100)"></div>
+                </div>
+              }
+
               @if(recordedMixUrl(); as url) {
                 <div class="flex justify-center gap-2 pt-2">
-                  <a [href]="url" download="aura-mix.webm" class="text-sm p-1 border hover:text-black"
+                  <a [href]="url" [download]="recordingFormat() === 'wav' ? 'aura-rec.wav' : 'aura-rec.webm'" class="text-sm p-1 border hover:text-black"
                     [class]="'border-' + currentTheme().accent + '-500/50'"
-                    [class]="djHoverBgClass">[ DOWNLOAD ]</a>
+                    [class]="djHoverBgClass">[ SAVE ]</a>
                   @if (canShare()) {
                     <button (click)="shareMix()" class="text-sm p-1 border hover:text-black"
                       [class]="'border-' + currentTheme().accent + '-500/50'"
@@ -210,40 +249,69 @@
                   <span class="w-3 h-3 rounded-full bg-green-500 rec-indicator recording"></span>
                   <span class="text-xs text-green-500">[ ACTIVE ]</span>
                 }
+                @if (micClipping()) {
+                  <span class="text-xs bg-red-600 text-white px-1 rounded ml-2 animate-pulse">[ CLIP ]</span>
+                }
               </h3>
-              <div class="flex justify-center items-center gap-4">
-                <button (click)="toggleMicrophone()" class="px-3 py-1 border hover:text-black"
-                  [class]="'border-' + currentTheme().accent + '-500/50'"
-                  [class]="djHoverBgClass">
-                  {{ micEnabled() ? 'DISABLE' : 'ENABLE' }}
-                </button>
+              <div class="flex flex-col gap-2">
+                <!-- Device Selection -->
+                @if (availableInputDevices().length > 0) {
+                  <select class="w-full text-xs p-1 bg-black border"
+                    [class]="'border-' + currentTheme().accent + '-500/50 text-' + currentTheme().accent + '-400'"
+                    [value]="micDeviceId()" (change)="micDeviceId.set($any($event.target).value); toggleMicrophone(); toggleMicrophone();">
+                    @for (device of availableInputDevices(); track device.deviceId) {
+                      <option [value]="device.deviceId">{{ device.label || 'Microphone ' + ($index + 1) }}</option>
+                    }
+                  </select>
+                }
+                <div class="flex justify-center items-center gap-4">
+                  <button (click)="toggleMicrophone()" class="px-3 py-1 border hover:text-black text-xs"
+                    [class]="'border-' + currentTheme().accent + '-500/50'"
+                    [class]="djHoverBgClass">
+                    {{ micEnabled() ? 'DISABLE' : 'ENABLE' }}
+                  </button>
+                  <button (click)="toggleMicLimiter()" class="px-2 py-1 border hover:text-black text-xs"
+                    [class]="'border-' + currentTheme().accent + '-500/50'"
+                    [class]="djHoverBgClass"
+                    [class.bg-red-900]="micLimiterActive()">
+                    [ LIMITER: {{ micLimiterActive() ? 'ON' : 'OFF' }} ]
+                  </button>
+                </div>
               </div>
+
               @if (micEnabled()) {
-                <div class="flex items-center justify-center gap-4 pt-2">
-                   <div class="vu-meter h-24" [class]="'border-' + currentTheme().neutral + '-700'" [class]="djBgStone800">
+                <div class="flex items-center justify-center gap-2 pt-2">
+                   <div class="vu-meter h-32" [class]="'border-' + currentTheme().neutral + '-700'" [class]="djBgStone800">
                       @for(bar of vuBars; track $index) {
                         <div class="vu-bar" [class.green]="$index/12 < vuLevelMic() && $index < 8" [class.yellow]="$index/12 < vuLevelMic() && $index >= 8 && $index < 10" [class.red]="$index/12 < vuLevelMic() && $index >= 10"></div>
                       }
                    </div>
-                  <div class="flex flex-col items-center">
-                    <span class="text-xs">VOL</span>
-                    <input type="range" min="0" max="100" [value]="micVolume()" (input)="onMicVolumeChange($event)" class="w-20 aura-slider vertical-slider h-24">
-                  </div>
-                  <div class="flex flex-col items-center">
-                    <span class="text-xs">HI</span>
-                    <input type="range" min="0" max="100" [value]="micEqHigh()" (input)="onMicEqChange($event, 'High')" class="w-20 aura-slider vertical-slider h-24">
-                  </div>
-                  <div class="flex flex-col items-center">
-                    <span class="text-xs">MID</span>
-                    <input type="range" min="0" max="100" [value]="micEqMid()" (input)="onMicEqChange($event, 'Mid')" class="w-20 aura-slider vertical-slider h-24">
-                  </div>
-                  <div class="flex flex-col items-center">
-                    <span class="text-xs">LOW</span>
-                    <input type="range" min="0" max="100" [value]="micEqLow()" (input)="onMicEqChange($event, 'Low')" class="w-20 aura-slider vertical-slider h-24">
-                  </div>
-                   <div class="flex flex-col items-center">
-                    <span class="text-xs">FX</span>
-                    <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(micFilterFreq())" (input)="onMicFilterChange($event)" class="w-20 aura-slider vertical-slider h-24">
+                  <!-- Mic Controls: Vol, EQ, Dynamics -->
+                  <div class="flex flex-wrap justify-center gap-2 max-w-[250px]">
+                    <div class="flex flex-col items-center">
+                      <span class="text-[10px]">VOL</span>
+                      <input type="range" min="0" max="100" [value]="micVolume()" (input)="onMicVolumeChange($event)" class="w-8 aura-slider vertical-slider h-20">
+                    </div>
+                    <div class="flex flex-col items-center">
+                      <span class="text-[10px]">HI</span>
+                      <input type="range" min="0" max="100" [value]="micEqHigh()" (input)="onMicEqChange($event, 'High')" class="w-8 aura-slider vertical-slider h-20">
+                    </div>
+                    <div class="flex flex-col items-center">
+                      <span class="text-[10px]">MID</span>
+                      <input type="range" min="0" max="100" [value]="micEqMid()" (input)="onMicEqChange($event, 'Mid')" class="w-8 aura-slider vertical-slider h-20">
+                    </div>
+                    <div class="flex flex-col items-center">
+                      <span class="text-[10px]">LOW</span>
+                      <input type="range" min="0" max="100" [value]="micEqLow()" (input)="onMicEqChange($event, 'Low')" class="w-8 aura-slider vertical-slider h-20">
+                    </div>
+                    <div class="flex flex-col items-center">
+                      <span class="text-[10px]">COMP</span>
+                      <input type="range" min="-60" max="0" [value]="micCompressorThreshold()" (input)="onMicCompressorThresholdChange($event)" class="w-8 aura-slider vertical-slider h-20" title="Threshold">
+                    </div>
+                    <div class="flex flex-col items-center">
+                      <span class="text-[10px]">RATIO</span>
+                      <input type="range" min="1" max="20" [value]="micCompressorRatio()" [disabled]="micLimiterActive()" (input)="onMicCompressorRatioChange($event)" class="w-8 aura-slider vertical-slider h-20" title="Ratio">
+                    </div>
                   </div>
                 </div>
               }

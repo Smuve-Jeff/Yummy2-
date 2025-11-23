@@ -185,6 +185,19 @@ export class AppComponent implements OnDestroy {
   micEqLow = signal(50); // 0-100
   micFilterFreq = signal(20000); // Low-pass filter frequency, 20Hz-20KHz
   vuLevelMic = signal(0); // VU level for microphone
+  availableInputDevices = signal<MediaDeviceInfo[]>([]);
+  micDeviceId = signal<string | null>(null);
+  bufferSize = signal<'high-performance' | 'standard'>('high-performance');
+
+  // Dynamics & Recording State
+  micCompressorThreshold = signal(-24); // dB
+  micCompressorRatio = signal(12); // Ratio
+  micLimiterActive = signal(true);
+  micClipping = signal(false);
+  recordingSource = signal<'master' | 'mic' | 'deckA' | 'deckB'>('master');
+  recordingFormat = signal<'webm' | 'wav'>('webm');
+  midiConnected = signal<boolean>(false);
+  midiDeviceName = signal<string>('');
 
   // NEW: Theming State
   readonly THEMES = THEMES;
@@ -224,12 +237,18 @@ export class AppComponent implements OnDestroy {
   private micGainNode: GainNode | null = null;
   private micEqNodes: BiquadFilterNode[] = [];
   private micFilterNode: BiquadFilterNode | null = null;
+  private micCompressorNode: DynamicsCompressorNode | null = null; // NEW: Compressor
   private micStream: MediaStream | null = null; // To hold the microphone stream
 
   // Recording nodes
+  private recordingSelectorNode!: GainNode; // NEW: To switch between sources
   private destinationNode!: MediaStreamAudioDestinationNode; // FIX: Corrected type name
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
+  private wavLeftBuffer: Float32Array[] = []; // NEW: For WAV recording
+  private wavRightBuffer: Float32Array[] = []; // NEW: For WAV recording
+  private wavRecordingLength = 0; // NEW: Total samples recorded
+  private scriptProcessor: ScriptProcessorNode | null = null; // NEW: Fallback for raw PCM capture
   private recordingIntervalId?: number;
   private vuIntervalId?: number;
 
@@ -293,6 +312,91 @@ export class AppComponent implements OnDestroy {
 
     // Set initial track for player mode
     this.loadTrackToDeck(initialDeckState.track, 'A');
+
+    // Enumerate input devices
+    this.enumerateAudioDevices();
+    navigator.mediaDevices.ondevicechange = () => {
+      this.enumerateAudioDevices();
+    };
+
+    this.initMidi();
+  }
+
+  private async initMidi(): Promise<void> {
+    if (navigator.requestMIDIAccess) {
+      try {
+        const midiAccess = await navigator.requestMIDIAccess();
+        this.onMidiSuccess(midiAccess);
+      } catch (err) {
+        console.warn('MIDI Access Failed', err);
+      }
+    } else {
+      console.warn('Web MIDI API not supported.');
+    }
+  }
+
+  private onMidiSuccess(midiAccess: WebMidi.MIDIAccess): void {
+    if (midiAccess.inputs.size > 0) {
+      this.midiConnected.set(true);
+      const firstInput = midiAccess.inputs.values().next().value;
+      if (firstInput) {
+        this.midiDeviceName.set(firstInput.name || 'Unknown MIDI Device');
+      }
+    }
+
+    for (const input of midiAccess.inputs.values()) {
+      input.onmidimessage = this.onMidiMessage.bind(this);
+    }
+
+    midiAccess.onstatechange = (e: WebMidi.MIDIConnectionEvent) => {
+      if (e.port.type === 'input') {
+        if (e.port.state === 'connected') {
+           this.midiConnected.set(true);
+           this.midiDeviceName.set(e.port.name || 'Unknown MIDI Device');
+        } else {
+           this.midiConnected.set(false);
+           this.midiDeviceName.set('');
+        }
+      }
+    };
+  }
+
+  private onMidiMessage(message: WebMidi.MIDIMessageEvent): void {
+    const [command, note, velocity] = message.data;
+
+    // Simple mapping: CC1 (Mod Wheel) -> Mic Volume
+    if (command >= 176 && command <= 191) { // Control Change
+      if (note === 1) { // CC #1 Mod Wheel
+        const normalized = velocity / 127;
+        const vol = Math.floor(normalized * 100);
+        this.micVolume.set(vol);
+        if (this.micGainNode) {
+          this.micGainNode.gain.value = this.mapSliderToGain(vol);
+        }
+      } else if (note === 2) { // CC #2 Breath Control -> Filter Freq
+        const normalized = velocity / 127;
+        const freq = this.mapFilterSliderToFreq(normalized);
+        this.micFilterFreq.set(freq);
+        if (this.micFilterNode) {
+          this.micFilterNode.frequency.value = freq;
+        }
+      }
+    }
+  }
+
+  private async enumerateAudioDevices(): Promise<void> {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputDevices = devices.filter(device => device.kind === 'audioinput');
+      this.availableInputDevices.set(inputDevices);
+      if (!this.micDeviceId() && inputDevices.length > 0) {
+        // Automatically select the first device if none selected, or 'default' if available
+        const defaultDevice = inputDevices.find(d => d.deviceId === 'default');
+        this.micDeviceId.set(defaultDevice ? defaultDevice.deviceId : inputDevices[0].deviceId);
+      }
+    } catch (err) {
+      console.error('Error enumerating audio devices:', err);
+    }
   }
 
   ngOnDestroy(): void {
@@ -309,7 +413,10 @@ export class AppComponent implements OnDestroy {
   private initAudioContext(): void {
     if (this.audioContext) return; // Prevent re-initialization
 
-    this.audioContext = new AudioContext();
+    this.audioContext = new AudioContext({
+      latencyHint: this.bufferSize() === 'high-performance' ? 'interactive' : 'balanced',
+      sampleRate: 48000 // Attempt to use 48kHz if supported
+    });
 
     // Create master nodes
     this.gainNodeMaster = this.audioContext.createGain();
@@ -321,14 +428,21 @@ export class AppComponent implements OnDestroy {
     this.analyserB = this.audioContext.createAnalyser();
     this.analyserMic = this.audioContext.createAnalyser(); // For microphone VU meter
 
+    // Create selector for recording
+    this.recordingSelectorNode = this.audioContext.createGain();
+
     // Create destination for recording
     this.destinationNode = this.audioContext.createMediaStreamDestination();
+    this.recordingSelectorNode.connect(this.destinationNode); // Connect selector to destination
 
     // Connect master chain: Crossfade -> EQ -> Master Gain -> Analyser -> Destination & Speakers
     this.crossfadeNode.connect(this.gainNodeMaster);
     this.setupMasterEq(this.gainNodeMaster); // EQ nodes are connected here
     this.eqNodesMaster[this.eqNodesMaster.length - 1].connect(this.analyserMaster); // Last EQ node connects to analyser
-    this.analyserMaster.connect(this.destinationNode); // Connect to recording destination
+
+    // Default recording routing (Master)
+    this.updateRecordingRouting();
+
     this.analyserMaster.connect(this.audioContext.destination); // Connect to speakers
 
     // Initialize crossfader position
@@ -389,6 +503,13 @@ export class AppComponent implements OnDestroy {
         this.analyserMic.getByteFrequencyData(data);
         const avg = data.reduce((sum, val) => sum + val, 0) / data.length;
         this.vuLevelMic.set(avg / 255);
+
+        // Clipping Detection
+        const max = data.reduce((a, b) => Math.max(a, b), 0);
+        if (max > 250) { // Approx -0.5dB
+          this.micClipping.set(true);
+          setTimeout(() => this.micClipping.set(false), 500);
+        }
       }
     }, 100); // Update VU meters 10 times per second
   }
@@ -989,6 +1110,36 @@ export class AppComponent implements OnDestroy {
     }
   }
 
+  updateRecordingRouting(): void {
+    // Disconnect everything from selector first
+    try {
+      this.analyserMaster.disconnect(this.recordingSelectorNode);
+      if (this.micCompressorNode) this.micCompressorNode.disconnect(this.recordingSelectorNode);
+      if (this.gainNodeA) this.gainNodeA.disconnect(this.recordingSelectorNode);
+      if (this.gainNodeB) this.gainNodeB.disconnect(this.recordingSelectorNode);
+    } catch (e) {
+      // Ignore disconnection errors if nodes weren't connected
+    }
+
+    const source = this.recordingSource();
+    if (source === 'master') {
+      this.analyserMaster.connect(this.recordingSelectorNode);
+    } else if (source === 'mic' && this.micCompressorNode) {
+      this.micCompressorNode.connect(this.recordingSelectorNode);
+    } else if (source === 'deckA' && this.gainNodeA) {
+      this.gainNodeA.connect(this.recordingSelectorNode);
+    } else if (source === 'deckB' && this.gainNodeB) {
+      this.gainNodeB.connect(this.recordingSelectorNode);
+    }
+
+    // Also update visualizer if we were to add a recording visualizer here
+  }
+
+  onRecordingSourceChange(source: 'master' | 'mic' | 'deckA' | 'deckB'): void {
+    this.recordingSource.set(source);
+    this.updateRecordingRouting();
+  }
+
   startMasterRecording(): void {
     if (!this.audioContext || !this.destinationNode) {
       console.error('AudioContext or MediaStreamAudioDestinationNode not initialized.');
@@ -996,53 +1147,160 @@ export class AppComponent implements OnDestroy {
     }
     if (this.isRecording()) return;
 
-    this.recordedChunks = [];
     this.recordedMixUrl.set(null);
     this.recordedBlob.set(null);
     this.recordingTime.set(0);
 
-    try {
-      this.mediaRecorder = new MediaRecorder(this.destinationNode.stream, { mimeType: 'audio/webm; codecs=opus' });
+    if (this.recordingFormat() === 'webm') {
+      // WebM Recording Logic
+      this.recordedChunks = [];
+      try {
+        this.mediaRecorder = new MediaRecorder(this.destinationNode.stream, { mimeType: 'audio/webm; codecs=opus' });
 
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.recordedChunks.push(event.data);
-        }
-      };
+        this.mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            this.recordedChunks.push(event.data);
+          }
+        };
 
-      this.mediaRecorder.onstop = () => {
-        const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
-        this.recordedBlob.set(blob);
-        this.recordedMixUrl.set(URL.createObjectURL(blob));
-        console.log('Master recording stopped. Blob created.');
-        if (this.recordingIntervalId) clearInterval(this.recordingIntervalId);
-        this.recordingIntervalId = undefined;
-      };
+        this.mediaRecorder.onstop = () => {
+          const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
+          this.recordedBlob.set(blob);
+          this.recordedMixUrl.set(URL.createObjectURL(blob));
+          console.log('Master recording stopped (WebM). Blob created.');
+          if (this.recordingIntervalId) clearInterval(this.recordingIntervalId);
+          this.recordingIntervalId = undefined;
+        };
 
-      this.mediaRecorder.onerror = (event: any) => {
-        console.error('Master MediaRecorder error:', event.error);
-        // Optionally display error to user
+        this.mediaRecorder.onerror = (event: any) => {
+          console.error('Master MediaRecorder error:', event.error);
+          this.isRecording.set(false);
+          if (this.recordingIntervalId) clearInterval(this.recordingIntervalId);
+          this.recordingIntervalId = undefined;
+        };
+
+        this.mediaRecorder.start();
+        this.isRecording.set(true);
+        this.recordingIntervalId = window.setInterval(() => this.recordingTime.update(t => t + 1), 1000);
+        console.log('Master recording started (WebM).');
+      } catch (e: any) {
+        console.error('Error starting Master MediaRecorder:', e);
         this.isRecording.set(false);
-        if (this.recordingIntervalId) clearInterval(this.recordingIntervalId);
-        this.recordingIntervalId = undefined;
-      };
+      }
+    } else {
+      // WAV Recording Logic using ScriptProcessorNode (Capture raw PCM)
+      this.wavLeftBuffer = [];
+      this.wavRightBuffer = [];
+      this.wavRecordingLength = 0;
 
-      this.mediaRecorder.start();
-      this.isRecording.set(true);
-      this.recordingIntervalId = window.setInterval(() => this.recordingTime.update(t => t + 1), 1000);
-      console.log('Master recording started.');
-    } catch (e: any) {
-      console.error('Error starting Master MediaRecorder:', e);
-      // Optionally display error to user
-      this.isRecording.set(false);
+      try {
+        // Create a ScriptProcessorNode with a bufferSize of 4096 and a single input/output channel
+        this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 2, 2);
+
+        this.scriptProcessor.onaudioprocess = (e) => {
+          if (!this.isRecording()) return;
+
+          const left = e.inputBuffer.getChannelData(0);
+          const right = e.inputBuffer.getChannelData(1);
+
+          // Clone data because buffers are reused
+          this.wavLeftBuffer.push(new Float32Array(left));
+          this.wavRightBuffer.push(new Float32Array(right));
+          this.wavRecordingLength += 4096;
+        };
+
+        // Connect recording selector to script processor, then to destination (needed for chrome to fire process)
+        this.recordingSelectorNode.connect(this.scriptProcessor);
+        this.scriptProcessor.connect(this.audioContext.destination); // Needed to keep the node alive
+
+        this.isRecording.set(true);
+        this.recordingIntervalId = window.setInterval(() => this.recordingTime.update(t => t + 1), 1000);
+        console.log('Master recording started (WAV).');
+      } catch (e) {
+        console.error('Error starting WAV recording:', e);
+        this.isRecording.set(false);
+      }
     }
   }
 
   stopMasterRecording(): void {
-    if (this.mediaRecorder && this.isRecording()) {
-      this.mediaRecorder.stop();
+    if (this.isRecording()) {
+      if (this.recordingFormat() === 'webm' && this.mediaRecorder) {
+        this.mediaRecorder.stop();
+      } else if (this.recordingFormat() === 'wav' && this.scriptProcessor) {
+        // Stop WAV recording
+        this.scriptProcessor.disconnect();
+        this.recordingSelectorNode.disconnect(this.scriptProcessor);
+        this.scriptProcessor = null;
+
+        // Encode WAV
+        const blob = this.encodeWAV(this.wavLeftBuffer, this.wavRightBuffer, this.wavRecordingLength);
+        this.recordedBlob.set(blob);
+        this.recordedMixUrl.set(URL.createObjectURL(blob));
+
+        if (this.recordingIntervalId) clearInterval(this.recordingIntervalId);
+        this.recordingIntervalId = undefined;
+        console.log('Master recording stopped (WAV). Blob created.');
+      }
+
       this.isRecording.set(false);
       console.log('Attempting to stop master recording...');
+    }
+  }
+
+  private encodeWAV(leftBuffers: Float32Array[], rightBuffers: Float32Array[], length: number): Blob {
+    const buffer = new ArrayBuffer(44 + length * 2 * 2); // 44 bytes header + 16-bit (2 bytes) * 2 channels
+    const view = new DataView(buffer);
+    const sampleRate = this.audioContext.sampleRate;
+
+    // Flatten buffers
+    const left = this.mergeBuffers(leftBuffers, length);
+    const right = this.mergeBuffers(rightBuffers, length);
+
+    // Write WAV Header
+    this.writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + length * 2 * 2, true);
+    this.writeString(view, 8, 'WAVE');
+    this.writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+    view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+    view.setUint16(22, 2, true); // NumChannels (2 for Stereo)
+    view.setUint32(24, sampleRate, true); // SampleRate
+    view.setUint32(28, sampleRate * 4, true); // ByteRate (SampleRate * BlockAlign)
+    view.setUint16(32, 4, true); // BlockAlign (NumChannels * BitsPerSample/8)
+    view.setUint16(34, 16, true); // BitsPerSample (16)
+    this.writeString(view, 36, 'data');
+    view.setUint32(40, length * 2 * 2, true); // Subchunk2Size
+
+    // Write Interleaved PCM Data
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+      // Clamp and scale to 16-bit PCM
+      const sL = Math.max(-1, Math.min(1, left[i]));
+      const sR = Math.max(-1, Math.min(1, right[i]));
+      // Convert float -1.0...+1.0 to int16 -32768...+32767
+      view.setInt16(offset, sL < 0 ? sL * 0x8000 : sL * 0x7FFF, true);
+      offset += 2;
+      view.setInt16(offset, sR < 0 ? sR * 0x8000 : sR * 0x7FFF, true);
+      offset += 2;
+    }
+
+    return new Blob([view], { type: 'audio/wav' });
+  }
+
+  private mergeBuffers(buffers: Float32Array[], length: number): Float32Array {
+    const result = new Float32Array(length);
+    let offset = 0;
+    for (const buffer of buffers) {
+      result.set(buffer, offset);
+      offset += buffer.length;
+    }
+    return result;
+  }
+
+  private writeString(view: DataView, offset: number, string: string): void {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
     }
   }
 
@@ -1080,12 +1338,30 @@ export class AppComponent implements OnDestroy {
     if (this.micEnabled()) return; // Already enabled
 
     try {
-      this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const deviceId = this.micDeviceId();
+      const constraints: MediaStreamConstraints = {
+        audio: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          echoCancellation: false,
+          autoGainControl: false,
+          noiseSuppression: false,
+          latency: 0
+        }
+      };
+      this.micStream = await navigator.mediaDevices.getUserMedia(constraints);
       this.micSourceNode = this.audioContext.createMediaStreamSource(this.micStream);
       this.micGainNode = this.audioContext.createGain();
       this.micFilterNode = this.audioContext.createBiquadFilter(); // Low-pass filter
       this.micFilterNode.type = 'lowpass';
       this.micFilterNode.frequency.value = this.micFilterFreq(); // Initial filter frequency
+
+      // Initialize Compressor
+      this.micCompressorNode = this.audioContext.createDynamicsCompressor();
+      this.micCompressorNode.threshold.value = this.micCompressorThreshold();
+      this.micCompressorNode.knee.value = 40;
+      this.micCompressorNode.ratio.value = this.micLimiterActive() ? 20 : this.micCompressorRatio();
+      this.micCompressorNode.attack.value = 0.003;
+      this.micCompressorNode.release.value = 0.25;
 
       // Setup microphone EQ (3 bands: High, Mid, Low)
       const eqFrequencies = [250, 2500, 10000]; // Low, Mid, High frequencies for boosting/cutting
@@ -1098,13 +1374,14 @@ export class AppComponent implements OnDestroy {
         return eq;
       });
 
-      // Connect mic chain: Source -> Gain -> EQ1 -> EQ2 -> EQ3 -> Filter -> Analyser -> Master Gain
+      // Connect mic chain: Source -> Gain -> EQ1 -> EQ2 -> EQ3 -> Filter -> Compressor -> Analyser -> Master Gain
       this.micSourceNode.connect(this.micGainNode);
       this.micGainNode.connect(this.micEqNodes[0]);
       this.micEqNodes[0].connect(this.micEqNodes[1]);
       this.micEqNodes[1].connect(this.micEqNodes[2]);
       this.micEqNodes[2].connect(this.micFilterNode);
-      this.micFilterNode.connect(this.analyserMic); // Connect to mic analyser
+      this.micFilterNode.connect(this.micCompressorNode);
+      this.micCompressorNode.connect(this.analyserMic); // Connect to mic analyser
       this.analyserMic.connect(this.gainNodeMaster); // Route mic to master output
 
       // Apply initial mic settings
@@ -1113,6 +1390,7 @@ export class AppComponent implements OnDestroy {
       this.onMicEqChange({ target: { value: this.micEqMid() } } as any, 'Mid');
       this.onMicEqChange({ target: { value: this.micEqLow() } } as any, 'Low');
       this.onMicFilterChange({ target: { value: this.getNormalizedFilterValue(this.micFilterFreq()) } } as any);
+      this.updateRecordingRouting(); // Update routing to include mic if selected
 
       this.micEnabled.set(true);
       console.log('Microphone enabled.');
@@ -1132,6 +1410,7 @@ export class AppComponent implements OnDestroy {
     if (this.micSourceNode) this.micSourceNode.disconnect();
     if (this.micGainNode) this.micGainNode.disconnect();
     if (this.micFilterNode) this.micFilterNode.disconnect();
+    if (this.micCompressorNode) this.micCompressorNode.disconnect();
     this.micEqNodes.forEach(node => node.disconnect());
     // FIX: Ensure analyserMic exists before disconnecting it.
     if (this.analyserMic) this.analyserMic.disconnect(); // Disconnect analyser from master
@@ -1139,6 +1418,7 @@ export class AppComponent implements OnDestroy {
     this.micSourceNode = null;
     this.micGainNode = null;
     this.micFilterNode = null;
+    this.micCompressorNode = null;
     this.micEqNodes = [];
 
     this.micEnabled.set(false);
@@ -1177,6 +1457,33 @@ export class AppComponent implements OnDestroy {
     this.micFilterFreq.set(newFreq);
     if (this.micFilterNode) {
       this.micFilterNode.frequency.value = newFreq;
+    }
+  }
+
+  // --- Dynamics Controls ---
+  onMicCompressorThresholdChange(event: Event): void {
+    const val = parseFloat((event.target as HTMLInputElement).value);
+    this.micCompressorThreshold.set(val);
+    if (this.micCompressorNode) {
+      this.micCompressorNode.threshold.value = val;
+    }
+  }
+
+  onMicCompressorRatioChange(event: Event): void {
+    const val = parseFloat((event.target as HTMLInputElement).value);
+    this.micCompressorRatio.set(val);
+    if (this.micCompressorNode && !this.micLimiterActive()) {
+      this.micCompressorNode.ratio.value = val;
+    }
+  }
+
+  toggleMicLimiter(): void {
+    const newVal = !this.micLimiterActive();
+    this.micLimiterActive.set(newVal);
+    if (this.micCompressorNode) {
+      this.micCompressorNode.ratio.value = newVal ? 20 : this.micCompressorRatio();
+      this.micCompressorNode.knee.value = newVal ? 0 : 40; // Hard knee for limiter
+      this.micCompressorNode.attack.value = newVal ? 0.001 : 0.003; // Fast attack for limiter
     }
   }
 
