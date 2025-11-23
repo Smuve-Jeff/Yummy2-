@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, signal, output, ElementRef, viewChi
 import { CommonModule } from '@angular/common';
 // FIX: Import only types from AiService for full static import compatibility
 import { AiService, GenerateContentResponse, GenerateContentResult, Content, Type, Tool } from '../../../services/ai.service'; // Use declared types
-import { AppTheme } from '../../video-editor/app.component';
+import { AppTheme } from '../../../models/theme';
 import { MOCK_ARTISTS, ArtistProfile } from '../../networking/networking.component'; // NEW: Import MOCK_ARTISTS and ArtistProfile for AI context
 
 

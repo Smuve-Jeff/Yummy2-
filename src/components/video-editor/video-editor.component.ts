@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, signal, ElementRef, viewChild, OnDe
 import { CommonModule } from '@angular/common';
 // FIX: Imported types from AiService for full static import compatibility
 import type { GoogleGenAI, GenerateVideosParameters, GenerateVideosOperation, GenerateVideosResponse } from '../../services/ai.service';
-import { AppTheme } from './app.component';
+import { AppTheme } from '../../models/theme';
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
 
 @Component({

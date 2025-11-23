@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, ElementRef, viewChild, AfterViewInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AppTheme } from '../video-editor/app.component';
+import { AppTheme } from '../../models/theme';
 
 @Component({
   selector: 'app-audio-visualizer',
