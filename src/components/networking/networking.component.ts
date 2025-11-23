@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, signal, computed, inject, effect, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AppTheme } from '../video-editor/app.component';
+import { AppTheme } from '../../models/theme';
 // FIX: Import all declared types from AiService for full static import compatibility
 import { AiService, GenerateContentResponse, Type } from '../../services/ai.service'; // Use declared types
 

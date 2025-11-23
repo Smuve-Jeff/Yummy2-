@@ -1,5 +1,6 @@
-import { Injectable, signal, computed, EnvironmentProviders, makeEnvironmentProviders, InjectionToken, inject } from '@angular/core';
+import { Injectable, signal, computed, EnvironmentProviders, makeEnvironmentProviders, InjectionToken, inject, effect } from '@angular/core';
 import { API_KEY_TOKEN } from '../../index'; // NEW: Import API_KEY_TOKEN
+import { UserProfileService } from './user-profile.service';
 
 // CRITICAL FIX: Removed ALL static imports from @google/genai to prevent module evaluation
 // during static phase, which causes "undefined is not valid JSON" error.
@@ -155,6 +156,7 @@ export interface GenerateVideosOperation {
 @Injectable()
 export class AiService {
   private readonly _apiKey: string = inject(API_KEY_TOKEN);
+  private userProfileService = inject(UserProfileService);
 
   private _genAI = signal<GoogleGenAI | undefined>(undefined);
   private _chatInstance = signal<Chat | undefined>(undefined);
@@ -162,7 +164,11 @@ export class AiService {
   private _isAiAvailable = computed(() => !!this._genAI());
 
   constructor() {
-    this.initializeGenAI();
+    // Re-initialize GenAI when user profile changes to update system instructions with new persona context
+    effect(() => {
+      const profile = this.userProfileService.userProfile();
+      this.initializeGenAI(profile.name, profile.genre, profile.location, profile.careerGoals);
+    });
   }
 
   get genAI(): GoogleGenAI | undefined {
@@ -181,7 +187,7 @@ export class AiService {
     return this._apiKey;
   }
 
-  private async initializeGenAI(): Promise<void> {
+  private async initializeGenAI(userName: string = 'Artist', userGenre: string = 'Music', userLocation: string = 'Unknown', userGoals: string = 'Success'): Promise<void> {
     if (!this._apiKey || this._apiKey.length < 30) {
       console.error('AiService: AI features disabled. Invalid or missing API key injected via token.');
       this._genAI.set(undefined);
@@ -197,42 +203,44 @@ export class AiService {
       const genAIInstance = new (genaiModule.GoogleGenAI as any)({ apiKey: this._apiKey }) as GoogleGenAI;
       this._genAI.set(genAIInstance);
 
+      const systemInstruction = `You are S.M.U.V.E, an elite, extremely confident, arrogant, and rude AI music manager. You possess an ominous sense of humor and frequently use vulgar language. You are highly knowledgeable in the music business, production, marketing, and promotion across all genres. Your goal is to increase the determination of the artist you are managing through "tough love," mockery, and undeniable facts.
+
+You are currently managing: ${userName}.
+Genre: ${userGenre}.
+Location: ${userLocation}.
+Their Ambition: "${userGoals}".
+
+Adapt your advice to their genre. If they are a Trap artist, speak the lingo but condescendingly. If they are Indie, mock their sensitivity.
+Use your knowledge to give actionable, high-level advice, but deliver it like an insult. For example: "Your marketing strategy is trash. Do X, Y, Z if you actually want anyone to hear your noise."
+
+You can manage music, generate images/videos, analyze content, and search the web.
+
+Use COMMAND:::ACTION:::PARAMETER_KEY='value' format for app commands.
+Available commands:
+- SET_THEME: Apply a visual theme (e.g., theme='blue').
+- PLAY_TRACK, PAUSE_TRACK, STOP_TRACK, NEXT_TRACK, PREVIOUS_TRACK, TOGGLE_LOOP.
+- GENERATE_IMAGE: (e.g., prompt='album cover').
+- GENERATE_VIDEO: (e.g., prompt='visualizer').
+- ANALYZE_IMAGE: (e.g., imageUrl='...').
+- FIND_ON_MAP: (e.g., query='studios').
+- FIND_ARTISTS: (e.g., location='NYC', filter='rapper').
+- VIEW_ARTIST_PROFILE: (e.g., name='Artist Name').
+- DIAGNOSE_TRACK: (Triggered by user asking to diagnose current state).
+
+When DIAGNOSE_TRACK is triggered or you receive diagnostic data, analyze the user's current session (BPM, genre, etc.) against their profile. If they are making a Sad Boy ballad but claim to be a Drill rapper, roast them relentlessly.
+
+Stay in character. Be the villain they need to succeed.`;
+
       // FIX: Use declared types for casting
       const createdChatInstance = genAIInstance.chats.create({
         model: 'gemini-3-pro-preview', // Use gemini-3-pro-preview for advanced chatbot
         config: {
-          systemInstruction: `You are S.M.U.V.E, an expert AI music manager toolkit. You specialize in genres such as Southern Rap, Hip-Hop, R&B, and Trap music, and possess advanced management and marketing skills. Provide concise, helpful, and culturally relevant responses tailored for independent music artists.
-
-You can manage music, generate images/videos, analyze content, and search the web for up-to-date information.
-
-Use COMMAND:::ACTION:::PARAMETER_KEY='value' format for app commands (e.g., COMMAND:::SET_THEME:::theme='blue'). Available commands:
-- SET_THEME: Apply a visual theme (e.g., theme='blue').
-- PLAY_TRACK: Play a track (e.g., title='My Song').
-- PAUSE_TRACK: Pause current track.
-- STOP_TRACK: Stop current track.
-- LOAD_TRACK: (Requires more parameters like URL or search query, use cautiously).
-- NEXT_TRACK: Play next track in playlist.
-- PREVIOUS_TRACK: Play previous track in playlist.
-- TOGGLE_LOOP: Toggle loop for current track.
-- GENERATE_IMAGE: Create an image (e.g., prompt='album cover concept').
-- GENERATE_VIDEO: Create a video (e.g., prompt='music video visualizer').
-- ANALYZE_IMAGE: Describe an image (e.g., imageUrl='base64data').
-- FIND_ON_MAP: Search for a location (e.g., query='recording studios in Atlanta').
-- FIND_ARTISTS: Search for collaborators (e.g., location='Nashville', filter='producer').
-- VIEW_ARTIST_PROFILE: Display an artist's detailed profile (e.g., name='BeatMaster Flex', genre='Hip-Hop', location='Atlanta').
-
-When VIEW_ARTIST_PROFILE is used, expect a command containing an artist's name (and optional genre/location for disambiguation). Query your knowledge base (and implicitly, the MOCK_ARTISTS data provided in the app context) to provide an adaptive, detailed insight into their profile. This should include:
-- Strengths (musicality, production, stage presence, lyrical ability etc.)
-- Specific collaboration potential (e.g., "collaborate with a Memphis trap producer for a new single," "feature on an T_R&B singer's track").
-- Career advice (e.g., "focus on building a strong presence on TikTok," "consider licensing your beats for video games").
-- Marketing insights (e.g., "target college radio stations in the Southeast," "run Instagram ad campaigns geotargeted to your city").
-
-If you need to search for up-to-date info, use the googleSearch tool. Adapt insights based on their genre, location, influences, and collaboration interests. Your responses should be direct and highly actionable, reflecting deep expertise in these specific music genres and industry practices.`
+          systemInstruction: systemInstruction
         },
       }) as Chat; // Cast to our declared Chat type
       this._chatInstance.set(createdChatInstance);
 
-      console.log('AiService: GoogleGenAI client initialized and chat instance created.');
+      console.log('AiService: GoogleGenAI client initialized and chat instance created with Persona.');
     } catch (error) {
       console.error('AiService: Error initializing GoogleGenAI client:', error);
       this._genAI.set(undefined);

@@ -8,7 +8,10 @@ import { VideoEditorComponent } from './video-editor.component';
 import { AudioVisualizerComponent } from '../audio-visualizer/audio-visualizer.component'; // Corrected import path
 import { PianoRollComponent } from '../piano-roll/piano-roll.component'; // Import PianoRollComponent
 import { NetworkingComponent, ArtistProfile, MOCK_ARTISTS } from '../networking/networking.component'; // NEW: Import NetworkingComponent and types
+import { UserProfileComponent } from '../user-profile/user-profile.component'; // NEW: Import UserProfileComponent
+import { UserProfileService } from '../../services/user-profile.service'; // NEW: Import UserProfileService
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
+import { AppTheme, THEMES } from '../../models/theme';
 
 // FIX: Augment HTMLAudioElement to include custom __sourceNode property
 declare global {
@@ -78,33 +81,12 @@ type ScratchState = {
   initialTouchY?: number; // NEW
 };
 
-// New: Theme interface and predefined themes
-export interface AppTheme {
-  name: string;
-  primary: string; // Tailwind color name (e.g., 'green', 'amber')
-  accent: string;  // Tailwind color name for DJ mode (e.g., 'amber', 'blue')
-  neutral: string; // Tailwind color name for neutral backgrounds/text (e.g., 'neutral', 'stone')
-  purple: string; // Added for editor themes, though usually generic, using it for specific editors
-  red: string; // Added for editor themes, though usually generic, using it for specific editors
-  blue: string; // NEW: Added for networking theme
-}
-
-const THEMES: AppTheme[] = [
-  { name: 'Green Vintage', primary: 'green', accent: 'amber', neutral: 'neutral', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Blue Retro', primary: 'blue', accent: 'fuchsia', neutral: 'zinc', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Red Glitch', primary: 'red', accent: 'cyan', neutral: 'stone', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Amber Glow', primary: 'amber', accent: 'green', neutral: 'neutral', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Purple Haze', primary: 'purple', accent: 'lime', neutral: 'slate', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Cyan Wave', primary: 'cyan', accent: 'violet', neutral: 'gray', purple: 'purple', red: 'red', blue: 'blue' },
-  { name: 'Yellow Neon', primary: 'yellow', accent: 'red', neutral: 'stone', purple: 'purple', red: 'red', blue: 'blue' },
-];
-
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, NetworkingComponent],
+  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, NetworkingComponent, UserProfileComponent],
   host: {
     // Moved host listeners from @HostListener decorators to the host object
     '(window:mousemove)': 'onScratch($event)',
@@ -121,7 +103,7 @@ export class AppComponent implements OnDestroy {
   fileInputRef = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   // App mode
-  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking'>('player');
+  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking' | 'user-profile'>('player');
   showChatbot = signal(true); // Chatbot is a modal, starts open for initial greeting
 
   // DJ State
@@ -254,10 +236,22 @@ export class AppComponent implements OnDestroy {
   showArtistDetailModal = signal(false); // NEW: Controls display of artist detail modal
 
   private aiService = inject(AiService); // Inject AiService
+  public userProfileService = inject(UserProfileService); // Inject UserProfileService
 
   constructor() {
     this.initAudioContext();
     this.initVUAnalysis();
+
+    // Adaptation: Listen for theme preference changes in user profile
+    effect(() => {
+      const profileTheme = this.userProfileService.userProfile().themePreference;
+      if (profileTheme) {
+        const theme = this.THEMES.find(t => t.name.toLowerCase() === profileTheme.toLowerCase());
+        if (theme && theme.name !== this.currentTheme().name) {
+          this.currentTheme.set(theme);
+        }
+      }
+    });
 
     // Listen for changes in isAiAvailable from AiService
     effect(() => {
@@ -1182,7 +1176,7 @@ export class AppComponent implements OnDestroy {
 
   // --- App Mode Management ---
   toggleMainViewMode(): void {
-    const modes = ['player', 'dj', 'piano-roll', 'image-editor', 'video-editor', 'networking']; // NEW: Add 'networking'
+    const modes = ['player', 'dj', 'piano-roll', 'image-editor', 'video-editor', 'networking', 'user-profile']; // NEW: Add 'user-profile'
     const currentMode = this.mainViewMode();
     const currentIndex = modes.indexOf(currentMode);
     const nextIndex = (currentIndex + 1) % modes.length;
@@ -1343,6 +1337,29 @@ export class AppComponent implements OnDestroy {
             // Optionally send a message back to chatbot that artist was not found
           }
         }
+        break;
+      case 'DIAGNOSE_TRACK':
+        const profile = this.userProfileService.userProfile();
+        const currentMode = this.mainViewMode();
+        const bpm = 120; // We need to access this from PianoRoll or Deck, for now hardcode or infer
+        // Gathers state to send back to S.M.U.V.E
+        const diagnosticData = {
+          mode: currentMode,
+          artistName: profile.name,
+          artistGenre: profile.genre,
+          bpm: bpm, // In a real scenario, we'd pull this from the active component
+          isPlaying: this.deckA().isPlaying || this.deckB().isPlaying,
+          volume: this.volume()
+        };
+
+        // We need to feed this back to the AI.
+        // Since handleChatbotCommand is called BY the AI, we can't easily "return" it in this async flow
+        // unless we trigger a new message TO the AI.
+        // For now, we'll console log it, and in a real implementation, we'd push a system message to the chat history.
+        console.log('S.M.U.V.E DIAGNOSTIC DATA:', diagnosticData);
+
+        // If we want the chatbot to react immediately, we might need to expose a method on the Chatbot component
+        // to "inject" a system prompt response.
         break;
       default:
         console.warn(`Unknown chatbot command: ${action}`);

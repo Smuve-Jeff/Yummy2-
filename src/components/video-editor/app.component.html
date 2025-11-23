@@ -26,6 +26,8 @@
           } @else if (mainViewMode() === 'video-editor') {
             <span>[ NETWORKING ]</span>
           } @else if (mainViewMode() === 'networking') {
+            <span>[ MY PROFILE ]</span>
+          } @else if (mainViewMode() === 'user-profile') {
             <span>[ PLAYER ]</span>
           }
         </button>
@@ -358,7 +360,7 @@
         </div>
         }
         @case ('piano-roll') {
-          <app-piano-roll [theme]="currentTheme()"></app-piano-roll>
+          <app-piano-roll [theme]="currentTheme()" [defaultBpm]="userProfileService.getRecommendedBpm()"></app-piano-roll>
         }
         @case ('player') {
         <!-- PLAYER MODE -->
@@ -492,6 +494,9 @@
             [initialSearchQuery]="networkingLocationQuery()"
             [theme]="currentTheme()"
           ></app-networking>
+        }
+        @case ('user-profile') {
+          <app-user-profile [theme]="currentTheme()"></app-user-profile>
         }
       }
     </div>

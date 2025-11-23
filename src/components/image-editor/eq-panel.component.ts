@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { EqBand, Enhancements, AppTheme } from '../../app.component';
+import { EqBand, Enhancements } from '../../components/video-editor/app.component';
+import { AppTheme } from '../../models/theme';
 
 @Component({
   selector: 'app-eq-panel',

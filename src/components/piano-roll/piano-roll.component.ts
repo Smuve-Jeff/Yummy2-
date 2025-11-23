@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, signal, OnDestroy, AfterViewInit, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AppTheme } from '../video-editor/app.component'; // Correct path
+import { AppTheme } from '../../models/theme'; // Correct path
 
 const BASE_OCTAVE = 3; // Starting MIDI note for C3
 const NUMBER_OF_NOTES_PER_OCTAVE = 12; // C to B
@@ -42,6 +42,7 @@ export class PianoRollComponent implements AfterViewInit, OnDestroy {
 
   // State
   allNotes = ALL_NOTES;
+  defaultBpm = input<number>(120); // NEW: Input for default BPM
   bpm = signal(120);
   isPlaying = signal(false);
   currentStep = signal(-1);
@@ -55,6 +56,12 @@ export class PianoRollComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     this.initializeEmptySequence();
+
+    // Effect to update BPM when defaultBpm input changes
+    effect(() => {
+      this.bpm.set(this.defaultBpm());
+    }, { allowSignalWrites: true });
+
     effect(() => {
       // Re-initialize sequence if notes change (though `allNotes` is static here)
       // This is a placeholder for potential dynamic note ranges in the future
