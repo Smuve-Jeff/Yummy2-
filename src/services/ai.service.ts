@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, EnvironmentProviders, makeEnvironmentProviders, InjectionToken, inject } from '@angular/core';
-import { AQ.Ab8RN6KeD2R4N5qbuW1p8POkaV5HpktcPPEEudxqh0zK5S77yg }'../../index'; // NEW: Import API_KEY_TOKEN
+import { API_KEY_TOKEN } from '../../index';
 
 // CRITICAL FIX: Removed ALL static imports from @google/genai to prevent module evaluation
 // during static phase, which causes "undefined is not valid JSON" error.

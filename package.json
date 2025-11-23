@@ -6,23 +6,29 @@
   "scripts": {
     "dev": "ng serve",
     "build": "ng build",
-    "preview": "ng serve --configuration=production"
+    "preview": "ng serve --configuration=production",
+    "test": "vitest run"
   },
   "dependencies": {
-    "rxjs": "^7.8.2",
-    "@angular/platform-browser": "^20.3.0",
-    "@angular/core": "^20.3.0",
-    "@angular/common": "^20.3.0",
-    "@google/genai": "^1.29.1",
     "@angular/build": "^20.3.0",
     "@angular/cli": "^20.3.0",
-    "@angular/compiler-cli": "^20.3.0",
+    "@angular/common": "^20.3.0",
     "@angular/compiler": "^20.3.0",
+    "@angular/compiler-cli": "^20.3.0",
+    "@angular/core": "^20.3.0",
+    "@angular/platform-browser": "^20.3.0",
+    "@google/genai": "^1.29.1",
+    "rxjs": "^7.8.2",
     "tailwindcss": "latest"
   },
   "devDependencies": {
+    "@analogjs/vite-plugin-angular": "^2.1.0",
+    "@angular/platform-browser-dynamic": "^20.3.12",
     "@types/node": "^22.14.0",
+    "happy-dom": "^20.0.10",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^3.2.4",
+    "zone.js": "^0.15.1"
   }
 }
