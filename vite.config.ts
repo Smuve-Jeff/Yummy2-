@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
@@ -18,6 +19,10 @@ export default defineConfig(({ mode }) => {
         alias: {
             // Add any necessary aliases here
         }
-    }
+    },
+    test: {
+      environment: 'happy-dom',
+      include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    },
   };
 });
