@@ -61,6 +61,66 @@
         <option value="Sound Designer">Sound Designer</option>
       </select>
     </div>
+    <div class="flex-grow flex flex-col gap-2">
+      <label for="genre-filter" class="block text-sm" [class]="'text-' + theme().blue + '-300'">GENRE:</label>
+      <input id="genre-filter"
+        type="text"
+        [value]="genreFilter()"
+        (input)="onGenreFilterInput($event)"
+        placeholder="e.g., 'Hip-Hop'"
+        class="w-full p-2 text-sm focus:ring-500"
+        [class]="'bg-' + theme().blue + '-800/50'"
+        [class]="'border border-' + theme().blue + '-500/50'"
+        [class]="'text-' + theme().neutral + '-200'"
+        [class]="'focus:ring-' + theme().blue + '-500'"
+        [class]="'focus:border-' + theme().blue + '-500'"
+        [disabled]="isLoading()">
+    </div>
+    <div class="flex-grow flex flex-col gap-2">
+      <label for="specialties-filter" class="block text-sm" [class]="'text-' + theme().blue + '-300'">SPECIALTIES:</label>
+      <input id="specialties-filter"
+        type="text"
+        [value]="specialtiesFilter()"
+        (input)="onSpecialtiesFilterInput($event)"
+        placeholder="e.g., 'Sampling'"
+        class="w-full p-2 text-sm focus:ring-500"
+        [class]="'bg-' + theme().blue + '-800/50'"
+        [class]="'border border-' + theme().blue + '-500/50'"
+        [class]="'text-' + theme().neutral + '-200'"
+        [class]="'focus:ring-' + theme().blue + '-500'"
+        [class]="'focus:border-' + theme().blue + '-500'"
+        [disabled]="isLoading()">
+    </div>
+    <div class="flex-grow flex flex-col gap-2">
+      <label for="influences-filter" class="block text-sm" [class]="'text-' + theme().blue + '-300'">INFLUENCES:</label>
+      <input id="influences-filter"
+        type="text"
+        [value]="influencesFilter()"
+        (input)="onInfluencesFilterInput($event)"
+        placeholder="e.g., 'J Dilla'"
+        class="w-full p-2 text-sm focus:ring-500"
+        [class]="'bg-' + theme().blue + '-800/50'"
+        [class]="'border border-' + theme().blue + '-500/50'"
+        [class]="'text-' + theme().neutral + '-200'"
+        [class]="'focus:ring-' + theme().blue + '-500'"
+        [class]="'focus:border-' + theme().blue + '-500'"
+        [disabled]="isLoading()">
+    </div>
+    <div class="flex-grow flex flex-col gap-2">
+      <label for="radius-filter" class="block text-sm" [class]="'text-' + theme().blue + '-300'">RADIUS (MILES):</label>
+      <input id="radius-filter"
+        type="number"
+        [value]="radiusFilter()"
+        (input)="onRadiusFilterInput($event)"
+        placeholder="e.g., 50"
+        class="w-full p-2 text-sm focus:ring-500"
+        [class]="'bg-' + theme().blue + '-800/50'"
+        [class]="'border border-' + theme().blue + '-500/50'"
+        [class]="'text-' + theme().neutral + '-200'"
+        [class]="'focus:ring-' + theme().blue + '-500'"
+        [class]="'focus:border-' + theme().blue + '-500'"
+        [disabled]="isLoading()">
+    </div>
   </div>
 
   <div class="flex gap-2 justify-center">
@@ -90,33 +150,38 @@
   </div>
 
   <h3 class="text-base mt-4" [class]="'text-' + theme().blue + '-300'">// COLLABORATORS FOUND:</h3>
-  <div class="flex-grow overflow-y-auto pr-2 space-y-4 p-2"
-    [class]="'border border-' + theme().blue + '-500/20'"
-    [style.--chat-history-track-bg]="'var(--color-' + theme().blue + '-950)'"
-    [style.--chat-history-thumb-bg]="'var(--color-' + theme().blue + '-400)'"
-    [style.--chat-history-thumb-border]="'var(--color-' + theme().blue + '-900)'"
-    [style.--chat-history-thumb-hover-bg]="'var(--color-' + theme().blue + '-300)'">
-    @for (artist of displayedArtists(); track artist.id) {
-      <div (click)="viewArtistDetail(artist)"
-           class="flex items-center gap-4 p-4 cursor-pointer transition-colors duration-200"
-        [class]="'bg-' + theme().blue + '-900/50'"
-        [class]="'border border-' + theme().blue + '-700/50'"
-        [class]="'hover:bg-' + theme().blue + '-800/70'">
-        <img [src]="artist.imageUrl" alt="{{ artist.name }}" class="w-20 h-20 object-cover border"
-          [class]="'border-' + theme().neutral + '-600'">
-        <div class="flex-grow">
-          <h4 class="text-lg" [class]="'text-' + theme().blue + '-300'">{{ artist.name }}</h4>
-          <p class="text-sm" [class]="'text-' + theme().neutral + '-400'">{{ artist.genre }} - {{ artist.location }}</p>
-          <p class="text-xs mt-1">{{ artist.bio.substring(0, 70) }}...</p>
-          <p class="text-xs mt-1" [class]="'text-' + theme().blue + '-500'">Interest: {{ artist.collaborationInterest.join(', ') }}</p>
+  <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="overflow-y-auto pr-2 space-y-4 p-2"
+      [class]="'border border-' + theme().blue + '-500/20'"
+      [style.--chat-history-track-bg]="'var(--color-' + theme().blue + '-950)'"
+      [style.--chat-history-thumb-bg]="'var(--color-' + theme().blue + '-400)'"
+      [style.--chat-history-thumb-border]="'var(--color-' + theme().blue + '-900)'"
+      [style.--chat-history-thumb-hover-bg]="'var(--color-' + theme().blue + '-300)'">
+      @for (artist of displayedArtists(); track artist.id) {
+        <div (click)="viewArtistDetail(artist)"
+            class="flex items-center gap-4 p-4 cursor-pointer transition-colors duration-200"
+          [class]="'bg-' + theme().blue + '-900/50'"
+          [class]="'border border-' + theme().blue + '-700/50'"
+          [class]="'hover:bg-' + theme().blue + '-800/70'">
+          <img [src]="artist.imageUrl" alt="{{ artist.name }}" class="w-20 h-20 object-cover border"
+            [class]="'border-' + theme().neutral + '-600'">
+          <div class="flex-grow">
+            <h4 class="text-lg" [class]="'text-' + theme().blue + '-300'">{{ artist.name }}</h4>
+            <p class="text-sm" [class]="'text-' + theme().neutral + '-400'">{{ artist.genre }} - {{ artist.location }}</p>
+            <p class="text-xs mt-1">{{ artist.bio.substring(0, 70) }}...</p>
+            <p class="text-xs mt-1" [class]="'text-' + theme().blue + '-500'">Interest: {{ artist.collaborationInterest.join(', ') }}</p>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 flex-shrink-0" [class]="'text-' + theme().blue + '-400'">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
         </div>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 flex-shrink-0" [class]="'text-' + theme().blue + '-400'">
-          <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-        </svg>
-      </div>
-    } @empty {
-      <p class="text-center text-sm p-4" [class]="'text-' + theme().neutral + '-500'">No artists found. Adjust your search or clear filters.</p>
-    }
+      } @empty {
+        <p class="text-center text-sm p-4" [class]="'text-' + theme().neutral + '-500'">No artists found. Adjust your search or clear filters.</p>
+      }
+    </div>
+    <div class="border" [class]="'border-' + theme().blue + '-500/20'">
+      <app-map [artists]="filteredArtists()" (mapBoundsChanged)="onMapBoundsChanged($event)"></app-map>
+    </div>
   </div>
 </div>
 
