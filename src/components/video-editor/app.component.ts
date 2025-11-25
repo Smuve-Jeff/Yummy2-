@@ -11,6 +11,7 @@ import { DrumMachineComponent } from '../drum-machine/drum-machine.component'; /
 import { WaveformComponent } from '../waveform/waveform.component'; // Import WaveformComponent
 import { NetworkingComponent, ArtistProfile, MOCK_ARTISTS } from '../networking/networking.component'; // NEW: Import NetworkingComponent and types
 import { UserProfileComponent } from '../user-profile/user-profile.component'; // NEW: Import UserProfileComponent
+import { NotepadComponent } from '../notepad/notepad.component';
 import { UserProfileService } from '../../services/user-profile.service'; // NEW: Import UserProfileService
 import { MusicDataService } from '../../services/music-data.service'; // NEW: Import MusicDataService
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
@@ -93,7 +94,7 @@ type ScratchState = {
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, DrumMachineComponent, WaveformComponent, NetworkingComponent, UserProfileComponent],
+  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, DrumMachineComponent, WaveformComponent, NetworkingComponent, UserProfileComponent, NotepadComponent],
   host: {
     // Moved host listeners from @HostListener decorators to the host object
     '(window:mousemove)': 'onScratch($event)',
@@ -134,7 +135,7 @@ export class AppComponent implements OnDestroy {
   fileInputRef = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   // App mode
-  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'drum-machine' | 'image-editor' | 'video-editor' | 'networking' | 'user-profile'>('player');
+  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'drum-machine' | 'image-editor' | 'video-editor' | 'networking' | 'user-profile' | 'notepad'>('player');
   showChatbot = signal(true); // Chatbot is a modal, starts open for initial greeting
 
   // DJ State
@@ -1299,7 +1300,7 @@ export class AppComponent implements OnDestroy {
 
   // --- App Mode Management ---
   toggleMainViewMode(): void {
-    const modes = ['player', 'dj', 'piano-roll', 'drum-machine', 'image-editor', 'video-editor', 'networking', 'user-profile']; // NEW: Add 'drum-machine' and 'user-profile'
+    const modes = ['player', 'dj', 'piano-roll', 'drum-machine', 'image-editor', 'video-editor', 'networking', 'user-profile', 'notepad']; // NEW: Add 'drum-machine' and 'user-profile'
     const currentMode = this.mainViewMode();
     const currentIndex = modes.indexOf(currentMode);
     const nextIndex = (currentIndex + 1) % modes.length;
