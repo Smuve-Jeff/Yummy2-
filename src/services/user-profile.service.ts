@@ -13,8 +13,9 @@ export interface UserProfile {
   bio: string;
   location: string;
   socialLinks: SocialLink[];
-  careerGoals: string;
-  specialties: string[];
+  goals: string;
+  expertise: string[];
+  musicJourney: string;
   themePreference: string; // Matches theme names in AppComponent
 }
 
@@ -26,8 +27,9 @@ const DEFAULT_PROFILE: UserProfile = {
   bio: '',
   location: '',
   socialLinks: [],
-  careerGoals: 'To dominate the charts.',
-  specialties: [],
+  goals: 'To dominate the charts.',
+  expertise: [],
+  musicJourney: '',
   themePreference: 'Green Vintage',
 };
 

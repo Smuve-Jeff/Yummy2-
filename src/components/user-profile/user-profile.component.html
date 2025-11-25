@@ -55,19 +55,27 @@
         <h3 class="text-xl font-bold font-mono" [ngClass]="textAccentClass()">Ambitions & Skills</h3>
 
         <div>
-          <label class="block text-xs font-mono mb-1 opacity-70">Career Goals</label>
-          <textarea [value]="profile().careerGoals" (input)="updateGoals($event)" rows="3"
+          <label class="block text-xs font-mono mb-1 opacity-70">Goals</label>
+          <textarea [value]="profile().goals" (input)="updateGoals($event)" rows="3"
                     class="w-full bg-black/50 border rounded p-2 font-mono focus:outline-none focus:ring-1"
                     [ngClass]="[borderClass(), focusRingClass()]"
                     placeholder="e.g. Get signed, 1M streams, Tour Europe..."></textarea>
         </div>
 
         <div>
-          <label class="block text-xs font-mono mb-1 opacity-70">Specialties (Comma separated)</label>
-          <input type="text" [value]="profile().specialties.join(', ')" (input)="updateSpecialties($event)"
+          <label class="block text-xs font-mono mb-1 opacity-70">Expertise (Comma separated)</label>
+          <input type="text" [value]="profile().expertise.join(', ')" (input)="updateExpertise($event)"
                  class="w-full bg-black/50 border rounded p-2 font-mono focus:outline-none focus:ring-1"
                  [ngClass]="[borderClass(), focusRingClass()]"
                  placeholder="e.g. Production, Mixing, Lyrics, Piano...">
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono mb-1 opacity-70">Music Journey</label>
+          <textarea [value]="profile().musicJourney" (input)="updateMusicJourney($event)" rows="5"
+                    class="w-full bg-black/50 border rounded p-2 font-mono focus:outline-none focus:ring-1"
+                    [ngClass]="[borderClass(), focusRingClass()]"
+                    placeholder="Describe your musical journey so far..."></textarea>
         </div>
       </div>
 
