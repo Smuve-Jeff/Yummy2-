@@ -9,6 +9,7 @@ import { AudioVisualizerComponent } from '../audio-visualizer/audio-visualizer.c
 import { PianoRollComponent } from '../piano-roll/piano-roll.component'; // Import PianoRollComponent
 import { DrumMachineComponent } from '../drum-machine/drum-machine.component'; // Import DrumMachineComponent
 import { WaveformComponent } from '../waveform/waveform.component'; // Import WaveformComponent
+import { DjComponent } from '../dj/dj.component';
 import { NetworkingComponent, ArtistProfile, MOCK_ARTISTS } from '../networking/networking.component'; // NEW: Import NetworkingComponent and types
 import { UserProfileComponent } from '../user-profile/user-profile.component'; // NEW: Import UserProfileComponent
 import { NotepadComponent } from '../notepad/notepad.component';
@@ -26,108 +27,21 @@ declare global {
   }
 }
 
-export interface Track {
-  title: string;
-  artist: string;
-  albumArtUrl: string;
-  audioSrc: string;
-  videoSrc?: string;
-}
-
-export interface EqBand {
-  label: string;
-  value: number;
-}
+import { DeckState, initialDeckState, ScratchState, Track, EqBand } from '../dj/dj.model';
 
 export interface Enhancements {
   bassBoost: boolean;
   surroundSound: boolean;
 }
 
-export interface DeckState {
-  track: Track;
-  isPlaying: boolean;
-  progress: number;
-  duration: number;
-  playbackRate: number; // Pitch
-  filterFreq: number; // FX (Low-pass filter frequency)
-  loop: boolean;
-  gain: number;
-  eqHigh: number;
-  eqMid: number;
-  eqLow: number;
-  bpm: number; // NEW: To store the detected BPM
-  wasPlayingBeforeScratch?: boolean; // NEW: To restore play state after scratch
-}
-
-export const initialDeckState: DeckState = {
-  track: {
-    title: 'NO SIGNAL',
-    artist: 'Load a track into deck',
-    albumArtUrl: 'https://picsum.photos/seed/placeholder/500/500',
-    audioSrc: '',
-  },
-  isPlaying: false,
-  progress: 0,
-  duration: 0,
-  playbackRate: 1,
-  filterFreq: 20000, // Start with filter wide open
-  loop: false,
-  gain: 50, // 0-100
-  eqHigh: 50, // 0-100
-  eqMid: 50, // 0-100
-  eqLow: 50, // 0-100
-  bpm: 0,
-  wasPlayingBeforeScratch: false,
-};
-
-type ScratchState = {
-  active: boolean;
-  lastAngle: number;
-  platterElement: HTMLElement | null;
-  initialTouchX?: number; // NEW
-  initialTouchY?: number; // NEW
-};
-
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, DrumMachineComponent, WaveformComponent, NetworkingComponent, UserProfileComponent, NotepadComponent],
-  host: {
-    // Moved host listeners from @HostListener decorators to the host object
-    '(window:mousemove)': 'onScratch($event)',
-    '(window:touchmove)': 'onScratch($event)',
-    '(window:mouseup)': 'onScratchEnd()',
-    '(window:touchend)': 'onScratchEnd()',
-  },
+  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, DrumMachineComponent, WaveformComponent, NetworkingComponent, UserProfileComponent, NotepadComponent, DjComponent],
 })
 export class AppComponent implements OnDestroy {
-  syncDeck(deckId: 'A' | 'B'): void {
-    const deckToSync = deckId === 'A' ? this.deckA() : this.deckB();
-    const otherDeck = deckId === 'A' ? this.deckB() : this.deckA();
-
-    if (deckToSync.bpm > 0 && otherDeck.bpm > 0) {
-      const newPlaybackRate = otherDeck.bpm / deckToSync.bpm;
-      const deckRef = deckId === 'A' ? this.audioPlayerARef() : this.audioPlayerBRef();
-      const videoRef = deckId === 'A' ? this.videoPlayerARef() : this.videoPlayerBRef();
-
-      if (deckRef?.nativeElement) {
-        deckRef.nativeElement.playbackRate = newPlaybackRate;
-        if (videoRef?.nativeElement) {
-          videoRef.nativeElement.playbackRate = newPlaybackRate;
-        }
-      }
-
-      if (deckId === 'A') {
-        this.deckA.update(state => ({ ...state, playbackRate: newPlaybackRate }));
-      } else {
-        this.deckB.update(state => ({ ...state, playbackRate: newPlaybackRate }));
-      }
-    }
-  }
-
   audioPlayerARef = viewChild<ElementRef<HTMLAudioElement>>('audioPlayerA');
   videoPlayerARef = viewChild<ElementRef<HTMLVideoElement>>('videoPlayerA');
   audioPlayerBRef = viewChild<ElementRef<HTMLAudioElement>>('audioPlayerB');
@@ -137,35 +51,6 @@ export class AppComponent implements OnDestroy {
   // App mode
   mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'drum-machine' | 'image-editor' | 'video-editor' | 'networking' | 'user-profile' | 'notepad'>('player');
   showChatbot = signal(true); // Chatbot is a modal, starts open for initial greeting
-
-  // DJ State
-  // deckA and deckB now come from MusicDataService, but we need to maintain local play state
-  // effectively merging service data (track info) with local audio state (Web Audio nodes)
-  // Actually, for continuous playback, we should probably rely on the service for data,
-  // but the actual PLAYING state is fleeting and tied to the audio engine which lives here in AppComponent (for now).
-  // We will map the Service's signals to our usage or use them directly.
-
-  // To enable persistence, we use the service's signals as the source of truth for TRACKS.
-  // But isPlaying, progress, etc are runtime states.
-  // MusicDataService has deckA and deckB signals. Let's alias them or sync them?
-  // The service stores the entire DeckState including isPlaying.
-  // If we want continuous playback across reloads, saving isPlaying is risky (auto-play noise).
-  // But for navigating VIEWS (not reloads), the Service signal is perfect.
-
-  deckA = this.musicDataService.deckA;
-  deckB = this.musicDataService.deckB;
-
-  crossfade = signal(0); // -1 is full A, 1 is full B
-  loadingTargetDeck = signal<'A' | 'B' | null>(null);
-
-  // Scratching State
-  isScratchingA = signal(false);
-  isScratchingB = signal(false);
-  scratchRotationA = signal('');
-  scratchRotationB = signal('');
-  private scratchStateA: ScratchState = { active: false, lastAngle: 0, platterElement: null };
-  private scratchStateB: ScratchState = { active: false, lastAngle: 0, platterElement: null };
-  private readonly SCRATCH_SENSITIVITY = 2.5; // Adjust to control scratch responsiveness
 
   // Player State
   playlist = this.musicDataService.playlist;
@@ -200,8 +85,6 @@ export class AppComponent implements OnDestroy {
   canShare = computed(() => !!(navigator.share && this.recordedBlob()));
 
   // VU Meter State
-  vuLevelA = signal(0);
-  vuLevelB = signal(0);
   vuLevelMaster = signal(0);
   vuBars = Array(12).fill(0); // For template iteration
 
@@ -235,16 +118,14 @@ export class AppComponent implements OnDestroy {
   djBgStone700 = computed(() => `bg-${this.currentTheme().neutral}-700`);
 
   // Audio Context and Nodes
-  private audioContext!: AudioContext;
-  private analyserMaster!: AnalyserNode;
-  private analyserA!: AnalyserNode;
-  private analyserB!: AnalyserNode;
-  private analyserMic!: AnalyserNode;
+  audioContext!: AudioContext;
+  analyserMaster!: AnalyserNode;
+  analyserA!: AnalyserNode;
+  analyserB!: AnalyserNode;
+  analyserMic!: AnalyserNode;
 
-  private gainNodeMaster!: GainNode;
-  private gainNodeA!: GainNode;
-  private gainNodeB!: GainNode;
-  private crossfadeNode!: GainNode;
+  gainNodeMaster!: GainNode;
+  crossfadeNode!: GainNode;
   private eqNodesMaster: BiquadFilterNode[] = [];
 
   // NEW: Microphone Audio Nodes
@@ -365,8 +246,6 @@ export class AppComponent implements OnDestroy {
 
     // Create analysers
     this.analyserMaster = this.audioContext.createAnalyser();
-    this.analyserA = this.audioContext.createAnalyser();
-    this.analyserB = this.audioContext.createAnalyser();
     this.analyserMic = this.audioContext.createAnalyser(); // For microphone VU meter
 
     // Create destination for recording
@@ -414,18 +293,6 @@ export class AppComponent implements OnDestroy {
 
   private initVUAnalysis(): void {
     this.vuIntervalId = window.setInterval(() => {
-      if (this.analyserA) {
-        const data = new Uint8Array(this.analyserA.fftSize);
-        this.analyserA.getByteFrequencyData(data);
-        const avg = data.reduce((sum, val) => sum + val, 0) / data.length;
-        this.vuLevelA.set(avg / 255);
-      }
-      if (this.analyserB) {
-        const data = new Uint8Array(this.analyserB.fftSize);
-        this.analyserB.getByteFrequencyData(data);
-        const avg = data.reduce((sum, val) => sum + val, 0) / data.length;
-        this.vuLevelB.set(avg / 255);
-      }
       if (this.analyserMaster) {
         const data = new Uint8Array(this.analyserMaster.fftSize);
         this.analyserMaster.getByteFrequencyData(data);
@@ -507,7 +374,7 @@ export class AppComponent implements OnDestroy {
     const deckRef = deckId === 'A' ? this.audioPlayerARef() : this.audioPlayerBRef();
     const videoRef = deckId === 'A' ? this.videoPlayerARef() : this.videoPlayerBRef();
 
-    const currentDeck = deckId === 'A' ? this.deckA() : this.deckB();
+    const currentDeck = deckId === 'A' ? this.musicDataService.deckA() : this.musicDataService.deckB();
 
     // Pause current track if playing
     if (currentDeck.isPlaying) {
@@ -526,7 +393,7 @@ export class AppComponent implements OnDestroy {
     this.analyzeTrack(track, deckId);
 
     // Set loading state
-    this.loadingTargetDeck.set(deckId);
+    // this.loadingTargetDeck.set(deckId);
 
     // Update deck state with new track
     const newDeckState = {
@@ -536,13 +403,13 @@ export class AppComponent implements OnDestroy {
     };
 
     if (deckId === 'A') {
-      this.deckA.set(newDeckState);
+      this.musicDataService.deckA.set(newDeckState);
       deckRef.nativeElement.src = track.audioSrc;
       if (this.videoPlayerARef()?.nativeElement) {
         this.videoPlayerARef()!.nativeElement.src = track.videoSrc || '';
       }
     } else {
-      this.deckB.set(newDeckState);
+      this.musicDataService.deckB.set(newDeckState);
       deckRef.nativeElement.src = track.audioSrc;
       if (this.videoPlayerBRef()?.nativeElement) {
         this.videoPlayerBRef()!.nativeElement.src = track.videoSrc || '';
@@ -553,64 +420,44 @@ export class AppComponent implements OnDestroy {
   // --- Playback Controls ---
 
   togglePlayPause(deckId: 'A' | 'B' | 'player' = 'player'): void {
-    const deckRef = deckId === 'A' ? this.audioPlayerARef() : deckId === 'B' ? this.audioPlayerBRef() : this.audioPlayerARef();
-    const videoRef = deckId === 'A' ? this.videoPlayerARef() : deckId === 'B' ? this.videoPlayerBRef() : this.videoPlayerARef();
-    const currentDeck = deckId === 'A' ? this.deckA() : deckId === 'B' ? this.deckB() : this.deckA(); // For player mode, default to deckA
+    if (deckId === 'player') {
+      const deckRef = this.audioPlayerARef();
+      const videoRef = this.videoPlayerARef();
+      const currentDeck = this.musicDataService.deckA();
 
-    if (!deckRef || !deckRef.nativeElement.src) {
-      console.warn(`No track loaded for deck ${deckId}.`);
-      return;
-    }
+      if (!deckRef || !deckRef.nativeElement.src) {
+        console.warn(`No track loaded for the player.`);
+        return;
+      }
 
-    // Ensure AudioContext is resumed on first user interaction
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(e => console.error("Error resuming AudioContext:", e));
-    }
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume().catch(e => console.error("Error resuming AudioContext:", e));
+      }
 
-    const isPlaying = !currentDeck.isPlaying;
+      const isPlaying = !currentDeck.isPlaying;
 
-    if (isPlaying) {
-      // Connect audio source to Web Audio API graph if not already connected
-      let sourceNode = deckRef.nativeElement.__sourceNode;
-      if (!sourceNode) {
-        sourceNode = this.audioContext.createMediaElementSource(deckRef.nativeElement);
-        deckRef.nativeElement.__sourceNode = sourceNode; // Store for future reference
-
-        // Create specific gain nodes for each deck
-        if (deckId === 'A') {
-          this.gainNodeA = this.audioContext.createGain();
-          sourceNode.connect(this.gainNodeA);
-          this.gainNodeA.connect(this.analyserA); // Connect to analyser A
+      if (isPlaying) {
+        let sourceNode = (deckRef.nativeElement as any).__sourceNode;
+        if (!sourceNode) {
+          sourceNode = this.audioContext.createMediaElementSource(deckRef.nativeElement);
+          (deckRef.nativeElement as any).__sourceNode = sourceNode;
+          const gainNodeA = this.audioContext.createGain();
+          sourceNode.connect(gainNodeA);
+          gainNodeA.connect(this.analyserA);
           this.analyserA.connect(this.crossfadeNode);
-        } else if (deckId === 'B') {
-          this.gainNodeB = this.audioContext.createGain();
-          sourceNode.connect(this.gainNodeB);
-          this.gainNodeB.connect(this.analyserB); // Connect to analyser B
-          this.analyserB.connect(this.crossfadeNode);
-        } else { // Player mode, assume deck A
-          this.gainNodeA = this.audioContext.createGain();
-          sourceNode.connect(this.gainNodeA);
-          sourceNode.connect(this.analyserA); // Connect to analyser A
-          this.analyserA.connect(this.crossfadeNode);
+        }
+        deckRef.nativeElement.play().catch(e => console.error(`Error playing player:`, e));
+        if (videoRef?.nativeElement) {
+          videoRef.nativeElement.play().catch(e => console.error(`Error playing video for player:`, e));
+        }
+      } else {
+        deckRef.nativeElement.pause();
+        if (videoRef?.nativeElement) {
+          videoRef.nativeElement.pause();
         }
       }
 
-      deckRef.nativeElement.play().catch(e => console.error(`Error playing deck ${deckId}:`, e));
-      if (videoRef?.nativeElement) {
-        videoRef.nativeElement.play().catch(e => console.error(`Error playing video for deck ${deckId}:`, e));
-      }
-    } else {
-      deckRef.nativeElement.pause();
-      if (videoRef?.nativeElement) {
-        videoRef.nativeElement.pause();
-      }
-    }
-
-    const updateFn = (oldState: DeckState) => ({ ...oldState, isPlaying: isPlaying });
-    if (deckId === 'A' || deckId === 'player') {
-      this.deckA.update(updateFn);
-    } else {
-      this.deckB.update(updateFn);
+      this.musicDataService.deckA.update(state => ({ ...state, isPlaying }));
     }
   }
 
@@ -618,61 +465,10 @@ export class AppComponent implements OnDestroy {
     const player = event.target as HTMLAudioElement | HTMLVideoElement;
     const updateFn = (oldState: DeckState) => ({ ...oldState, progress: player.currentTime });
     if (deckId === 'A') {
-      this.deckA.update(updateFn);
+      this.musicDataService.deckA.update(updateFn);
     } else {
-      this.deckB.update(updateFn);
+      this.musicDataService.deckB.update(updateFn);
     }
-  }
-
-  onLoadedMetadata(event: Event, deckId: 'A' | 'B'): void {
-    const player = event.target as HTMLAudioElement | HTMLVideoElement;
-    const updateFn = (oldState: DeckState) => ({ ...oldState, duration: player.duration, progress: 0 });
-
-    // FIX: Set initial gain values when metadata is loaded
-    if (deckId === 'A') {
-      this.deckA.update(updateFn);
-      if (this.gainNodeA) {
-        this.gainNodeA.gain.value = this.mapSliderToGain(this.deckA().gain);
-      }
-      // Reconnect if needed or ensure connections are fresh for Web Audio API
-      let sourceNode = (player as HTMLAudioElement).__sourceNode;
-      if (!sourceNode) {
-        sourceNode = this.audioContext.createMediaElementSource(player as HTMLAudioElement);
-        (player as HTMLAudioElement).__sourceNode = sourceNode;
-        this.gainNodeA = this.audioContext.createGain();
-        sourceNode.connect(this.gainNodeA);
-        this.gainNodeA.connect(this.analyserA);
-        this.analyserA.connect(this.crossfadeNode);
-      }
-
-      this.onEqChange({ target: { value: this.deckA().eqHigh } } as any, 'A', 'High');
-      this.onEqChange({ target: { value: this.deckA().eqMid } } as any, 'A', 'Mid');
-      this.onEqChange({ target: { value: this.deckA().eqLow } } as any, 'A', 'Low');
-      this.onFilterChange({ target: { value: this.getNormalizedFilterValue(this.deckA().filterFreq) } } as any, 'A');
-    } else {
-      this.deckB.update(updateFn);
-      if (this.gainNodeB) {
-        this.gainNodeB.gain.value = this.mapSliderToGain(this.deckB().gain);
-      }
-      // Reconnect if needed or ensure connections are fresh for Web Audio API
-      let sourceNode = (player as HTMLAudioElement).__sourceNode;
-      if (!sourceNode) {
-        sourceNode = this.audioContext.createMediaElementSource(player as HTMLAudioElement);
-        (player as HTMLAudioElement).__sourceNode = sourceNode;
-        this.gainNodeB = this.audioContext.createGain();
-        sourceNode.connect(this.gainNodeB);
-        this.gainNodeB.connect(this.analyserB);
-        this.analyserB.connect(this.crossfadeNode);
-      }
-
-      this.onEqChange({ target: { value: this.deckB().eqHigh } } as any, 'B', 'High');
-      this.onEqChange({ target: { value: this.deckB().eqMid } } as any, 'B', 'Mid');
-      this.onEqChange({ target: { value: this.deckB().eqLow } } as any, 'B', 'Low');
-      this.onFilterChange({ target: { value: this.getNormalizedFilterValue(this.deckB().filterFreq) } } as any, 'B');
-    }
-
-    // Reset loading state
-    this.loadingTargetDeck.set(null);
   }
 
   onEnded(deckId: 'A' | 'B'): void {
@@ -1159,7 +955,7 @@ export class AppComponent implements OnDestroy {
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = `aura-recording-${new Date().toISOString().slice(0, 19)}.wav`;
+    a.download = `smuve-recording-${new Date().toISOString().slice(0, 19)}.wav`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -1171,12 +967,12 @@ export class AppComponent implements OnDestroy {
       return;
     }
 
-    const file = new File([blob], 'aura-mix.webm', { type: blob.type });
+    const file = new File([blob], 'smuve-mix.webm', { type: blob.type });
     try {
       await navigator.share({
         files: [file],
-        title: 'Aura Mix',
-        text: 'Check out my latest mix from Aura Music Player!',
+        title: 'S.M.U.V.E. 2.0 Mix',
+        text: 'Check out my latest mix from S.M.U.V.E. 2.0!',
       });
       console.log('Mix shared successfully.');
     } catch (error) {

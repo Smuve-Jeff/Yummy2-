@@ -1,0 +1,296 @@
+<!-- DJ MODE -->
+<div class="flex flex-col lg:flex-row gap-4" [class]="djTextNeutral400Class">
+  <!-- DECK A -->
+  <div class="flex-1 p-2 space-y-3" [class]="djBorderClass">
+    <h2 class="text-center text-lg flex items-center justify-center gap-2" [class]="djTextColorClass">
+      [ DECK A ]
+    </h2>
+    <div class="flex gap-4">
+      <div class="flex-1 space-y-3">
+          <div class="w-full aspect-square mx-auto flex items-center justify-center bg-black relative">
+          <app-waveform [audioBuffer]="deckA().audioBuffer" [progress]="deckA().progress" [themeColor]="currentTheme().accent"></app-waveform>
+        </div>
+          <div class="text-center">
+          <h3 class="text-base truncate" [class]="mainTextColorClass()" [title]="deckA().track.title">{{ deckA().track.title }}</h3>
+          <p class="text-xs truncate" [class]="djTextNeutral400Class" [title]="deckA().track.artist">-- {{ deckA().track.artist }} --</p>
+          <p class="text-xs truncate" [class]="djTextNeutral400Class">BPM: {{ deckA().bpm > 0 ? deckA().bpm.toFixed(2) : '---' }}</p>
+        </div>
+        <div class="space-y-1">
+          <input type="range" min="0" [max]="deckA().duration" [value]="deckA().progress" (input)="onProgressChange($event, 'A')" class="w-full h-1 aura-slider">
+          <div class="flex justify-between text-xs" [class]="djTextNeutral400Class">
+            <span>{{ formatTime(deckA().progress) }}</span>
+            <span>{{ formatTime(deckA().duration) }}</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-around">
+          <button (click)="togglePlayPause('A')" class="w-16 h-10 flex items-center justify-center border-2"
+            [class]="'border-' + currentTheme().accent + '-500'"
+            [class]="djBg80050Class"
+            [class]="djTextAccent300Class"
+            [class]="djHoverBgClass">
+            @if (deckA().isPlaying) { <span>[ || ]</span> } @else { <span>[ &gt; ]</span> }
+          </button>
+          <button (click)="toggleLoop('A')" class="p-2 border hover:text-black text-xs"
+            [class]="djBorderClass"
+            [class]="djHoverBgClass"
+            [class]="deckA().loop ? djActiveBgClass : ''"
+            [class]="deckA().loop ? 'text-black' : ''">
+            <span>[ REPEAT ]</span>
+          </button>
+          <button (click)="syncDeck('A')" class="p-2 border hover:text-black text-xs"
+            [class]="djBorderClass"
+            [class]="djHoverBgClass">
+            <span>[ SYNC ]</span>
+          </button>
+        </div>
+      </div>
+      <!-- Channel Strip A -->
+      <div class="flex items-center gap-4 pl-4" [class]="'border-l-2 border-' + currentTheme().accent + '-500/20'">
+          <div class="flex flex-col items-center justify-between h-full space-y-2 text-sm">
+            <div class="flex flex-col items-center">
+              <span>GAIN</span> <input type="range" min="0" max="100" [value]="deckA().gain" (input)="onGainChange($event, 'A')" class="w-20 aura-slider">
+            </div>
+            <div class="flex flex-col items-center">
+              <span>HI</span> <input type="range" min="0" max="100" [value]="deckA().eqHigh" (input)="onEqChange($event, 'A', 'High')" class="w-20 aura-slider">
+            </div>
+            <div class="flex flex-col items-center">
+              <span>MID</span> <input type="range" min="0" max="100" [value]="deckA().eqMid" (input)="onEqChange($event, 'A', 'Mid')" class="w-20 aura-slider">
+            </div>
+              <div class="flex flex-col items-center">
+              <span>LOW</span> <input type="range" min="0" max="100" [value]="deckA().eqLow" (input)="onEqChange($event, 'A', 'Low')" class="w-20 aura-slider">
+            </div>
+            <div class="flex flex-col items-center">
+              <span>FX</span> <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(deckA().filterFreq)" (input)="onFilterChange($event, 'A')" class="w-20 aura-slider">
+            </div>
+          </div>
+          <div class="vu-meter" [class]="'border-' + currentTheme().neutral + '-700'" [class]="djBgStone800">
+            @for(bar of vuBars; track $index) {
+              <div class="vu-bar" [class.green]="$index/12 < vuLevelA() && $index < 8" [class.yellow]="$index/12 < vuLevelA() && $index >= 8 && $index < 10" [class.red]="$index/12 < vuLevelA() && $index >= 10"></div>
+            }
+          </div>
+          <div class="flex flex-col items-center justify-center space-y-2">
+            <span class="text-sm">PITCH</span>
+            <input type="range" min="0.5" max="2" step="0.01" [value]="deckA().playbackRate" (input)="onPitchChange($event, 'A')" class="aura-slider vertical-slider">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIXER -->
+  <div class="w-full lg:w-[450px] p-2 space-y-3 flex flex-col justify-between" [class]="djBorderClass">
+    <h2 class="text-center text-lg" [class]="djTextColorClass">[ MIXER ]</h2>
+    <div class="space-y-2">
+        <form (submit)="performSearch($event)">
+            <div class="flex space-x-2">
+                <input type="text" placeholder="Search online..." [value]="searchQuery()" (input)="onSearchQueryInput($event)" class="flex-grow border text-neutral-200 p-1 text-sm focus:ring-500"
+                  [class]="djBgStone900"
+                  [class]="'border-' + currentTheme().accent + '-500/50'"
+                  [class]="'placeholder-' + currentTheme().neutral + '-500'"
+                  [class]="'focus:ring-' + currentTheme().accent + '-500'"
+                  [class]="'focus:border-' + currentTheme().accent + '-500'">
+                <button type="submit" class="p-2 border hover:text-black text-sm"
+                  [class]="'border-' + currentTheme().accent + '-500/50'"
+                  [class]="djHoverBgClass">[SCN]</button>
+            </div>
+        </form>
+        @if (isSearching()) {
+            <div class="text-center text-sm p-2 border border-dashed" [class]="'border-' + currentTheme().accent + '-500/50'">[ SEARCHING... ]</div>
+        }
+        @if (searchResults().length > 0) {
+            <div class="border p-1 space-y-1 max-h-40 overflow-y-auto" [class]="'border-' + currentTheme().accent + '-500/50'">
+                @for(track of searchResults(); track track.title) {
+                    <div class="text-sm p-1" [class]="'hover:bg-' + currentTheme().neutral + '-700/50'">
+                        <p class="truncate">> {{ track.title }}</p>
+                        <div class="flex justify-between items-center mt-1">
+                            <p class="text-xs truncate pl-2" [class]="djTextNeutral400Class">-- {{ track.artist }}</p>
+                            <div class="flex gap-1">
+                                <button (click)="loadTrackToDeck(track, 'A')" class="px-1 border hover:text-black"
+                                  [class]="'border-' + currentTheme().accent + '-500/50'"
+                                  [class]="djHoverBgClass">->A</button>
+                                <button (click)="loadTrackToDeck(track, 'B')" class="px-1 border hover:text-black"
+                                  [class]="'border-' + currentTheme().accent + '-500/50'"
+                                  [class]="djHoverBgClass">->B</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    <!-- Recording Section -->
+    <div class="p-2 space-y-2 text-center" [class]="djBorderClass">
+      <h3 class="text-sm">[ RECORDING ]</h3>
+      <div class="flex justify-center items-center gap-4">
+        <button (click)="toggleRecording()" class="px-3 py-1 border hover:text-black"
+          [class]="'border-' + currentTheme().accent + '-500/50'"
+          [class]="djHoverBgClass">
+            <span class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-red-800 rec-indicator" [class.recording]="isRecording()"></span>
+              {{ isRecording() ? 'STOP' : 'REC' }}
+            </span>
+        </button>
+        <span class="text-lg">{{ formatTime(recordingTime()) }}</span>
+      </div>
+      @if(recordedMixUrl(); as url) {
+        <div class="flex justify-center gap-2 pt-2 flex-wrap">
+          <a [href]="url" download="smuve-mix.webm" class="text-xs p-1 border hover:text-black"
+            [class]="'border-' + currentTheme().accent + '-500/50'"
+            [class]="djHoverBgClass">[ SAVE WEBM ]</a>
+          <button (click)="saveAsWav()" class="text-xs p-1 border hover:text-black"
+            [class]="'border-' + currentTheme().accent + '-500/50'"
+            [class]="djHoverBgClass">[ SAVE WAV ]</button>
+          @if (canShare()) {
+            <button (click)="shareMix()" class="text-xs p-1 border hover:text-black"
+              [class]="'border-' + currentTheme().accent + '-500/50'"
+              [class]="djHoverBgClass">[ SHARE ]</button>
+          }
+        </div>
+      }
+    </div>
+    <!-- NEW: Microphone Control Section -->
+    <div class="p-2 space-y-2 text-center" [class]="djBorderClass">
+      <h3 class="text-sm flex items-center justify-center gap-2">
+        [ MICROPHONE ]
+        @if (micEnabled()) {
+          <span class="w-3 h-3 rounded-full bg-green-500 rec-indicator recording"></span>
+          <span class="text-xs text-green-500">[ ACTIVE ]</span>
+        }
+      </h3>
+      <div class="flex justify-center items-center gap-4">
+        <button (click)="toggleMicrophone()" class="px-3 py-1 border hover:text-black"
+          [class]="'border-' + currentTheme().accent + '-500/50'"
+          [class]="djHoverBgClass">
+          {{ micEnabled() ? 'DISABLE' : 'ENABLE' }}
+        </button>
+      </div>
+      @if (micEnabled()) {
+        <div class="flex items-center justify-center gap-4 pt-2">
+            <div class="vu-meter h-24" [class]="'border-' + currentTheme().neutral + '-700'" [class]="djBgStone800">
+              @for(bar of vuBars; track $index) {
+                <div class="vu-bar" [class.green]="$index/12 < vuLevelMic() && $index < 8" [class.yellow]="$index/12 < vuLevelMic() && $index >= 8 && $index < 10" [class.red]="$index/12 < vuLevelMic() && $index >= 10"></div>
+              }
+            </div>
+          <div class="flex flex-col items-center">
+            <span class="text-xs">VOL</span>
+            <input type="range" min="0" max="100" [value]="micVolume()" (input)="onMicVolumeChange($event)" class="w-20 aura-slider vertical-slider h-24">
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="text-xs">HI</span>
+            <input type="range" min="0" max="100" [value]="micEqHigh()" (input)="onMicEqChange($event, 'High')" class="w-20 aura-slider vertical-slider h-24">
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="text-xs">MID</span>
+            <input type="range" min="0" max="100" [value]="micEqMid()" (input)="onMicEqChange($event, 'Mid')" class="w-20 aura-slider vertical-slider h-24">
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="text-xs">LOW</span>
+            <input type="range" min="0" max="100" [value]="micEqLow()" (input)="onMicEqChange($event, 'Low')" class="w-20 aura-slider vertical-slider h-24">
+          </div>
+            <div class="flex flex-col items-center">
+            <span class="text-xs">FX</span>
+            <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(micFilterFreq())" (input)="onMicFilterChange($event)" class="w-20 aura-slider vertical-slider h-24">
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="vu-meter" [class]="'border-' + currentTheme().neutral + '-700'" [class]="djBgStone800">
+        @for(bar of vuBars; track $index) {
+          <div class="vu-bar" [class.green]="$index/12 < vuLevelMaster() && $index < 8" [class.yellow]="$index/12 < vuLevelMaster() && $index >= 8 && $index < 10" [class.red]="$index/12 < vuLevelMaster() && $index >= 10"></div>
+        }
+      </div>
+      <input type="range" min="-1" max="1" step="0.01" [value]="crossfade()" (input)="onCrossfadeChange($event)" class="flex-grow aura-slider">
+      <input type="range" min="0" max="1" step="0.01" [value]="volume()" (input)="onVolumeChange($event)" class="aura-slider vertical-slider">
+    </div>
+    <div class="flex justify-between items-center text-xs">
+        <span>DECK A</span>
+        <span>MASTER</span>
+        <span>DECK B</span>
+    </div>
+    <button (click)="openFilePickerForDeck('B')" class="w-full p-2 border hover:text-black text-sm"
+      [class]="'border-' + currentTheme().accent + '-500/50'"
+      [class]="djHoverBgClass">[ LOAD FILE ]</button>
+  </div>
+
+  <!-- DECK B -->
+  <div class="flex-1 p-2 space-y-3" [class]="djBorderClass">
+    <h2 class="text-center text-lg flex items-center justify-center gap-2" [class]="djTextColorClass">
+      [ DECK B ]
+    </h2>
+      <div class="flex gap-4">
+      <div class="flex-1 space-y-3">
+          <div class="w-full aspect-square mx-auto flex items-center justify-center bg-black relative">
+          <app-waveform [audioBuffer]="deckB().audioBuffer" [progress]="deckB().progress" [themeColor]="currentTheme().accent"></app-waveform>
+        </div>
+          <div class="text-center">
+          <h3 class="text-base truncate" [class]="mainTextColorClass()" [title]="deckB().track.title">{{ deckB().track.title }}</h3>
+          <p class="text-xs truncate" [class]="djTextNeutral400Class" [title]="deckB().track.artist">-- {{ deckB().track.artist }} --</p>
+          <p class="text-xs truncate" [class]="djTextNeutral400Class">BPM: {{ deckB().bpm > 0 ? deckB().bpm.toFixed(2) : '---' }}</p>
+        </div>
+        <div class="space-y-1">
+          <input type="range" min="0" [max]="deckB().duration" [value]="deckB().progress" (input)="onProgressChange($event, 'B')" class="w-full h-1 aura-slider">
+          <div class="flex justify-between text-xs" [class]="djTextNeutral400Class">
+            <span>{{ formatTime(deckB().progress) }}</span>
+            <span>{{ formatTime(deckB().duration) }}</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-around">
+          <button (click)="togglePlayPause('B')" class="w-16 h-10 flex items-center justify-center border-2"
+            [class]="'border-' + currentTheme().accent + '-500'"
+            [class]="djBg80050Class"
+            [class]="djTextAccent300Class"
+            [class]="djHoverBgClass">
+            @if (deckB().isPlaying) { <span>[ || ]</span> } @else { <span>[ &gt; ]</span> }
+          </button>
+          <button (click)="toggleLoop('B')" class="p-2 border hover:text-black text-xs"
+            [class]="djBorderClass"
+            [class]="djHoverBgClass"
+            [class]="deckB().loop ? djActiveBgClass : ''"
+            [class]="deckB().loop ? 'text-black' : ''">
+            <span>[ REPEAT ]</span>
+          </button>
+          <button (click)="syncDeck('B')" class="p-2 border hover:text-black text-xs"
+            [class]="djBorderClass"
+            [class]="djHoverBgClass">
+            <span>[ SYNC ]</span>
+          </button>
+        </div>
+      </div>
+      <!-- Channel Strip B -->
+      <div class="flex items-center gap-4 pl-4" [class]="'border-l-2 border-' + currentTheme().accent + '-500/20'">
+          <div class="flex flex-col items-center justify-between h-full space-y-2 text-sm">
+            <div class="flex flex-col items-center">
+              <span>GAIN</span> <input type="range" min="0" max="100" [value]="deckB().gain" (input)="onGainChange($event, 'B')" class="w-20 aura-slider">
+            </div>
+            <div class="flex flex-col items-center">
+              <span>HI</span> <input type="range" min="0" max="100" [value]="deckB().eqHigh" (input)="onEqChange($event, 'B', 'High')" class="w-20 aura-slider">
+            </div>
+            <div class="flex flex-col items-center">
+              <span>MID</span> <input type="range" min="0" max="100" [value]="deckB().eqMid" (input)="onEqChange($event, 'B', 'Mid')" class="w-20 aura-slider">
+            </div>
+              <div class="flex flex-col items-center">
+              <span>LOW</span> <input type="range" min="0" max="100" [value]="deckB().eqLow" (input)="onEqChange($event, 'B', 'Low')" class="w-20 aura-slider">
+            </div>
+            <div class="flex flex-col items-center">
+              <span>FX</span> <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(deckB().filterFreq)" (input)="onFilterChange($event, 'B')" class="w-20 aura-slider">
+            </div>
+          </div>
+          <div class="vu-meter" [class]="'border-' + currentTheme().neutral + '-700'" [class]="djBgStone800">
+            @for(bar of vuBars; track $index) {
+              <div class="vu-bar" [class.green]="$index/12 < vuLevelB() && $index < 8" [class.yellow]="$index/12 < vuLevelB() && $index >= 8 && $index < 10" [class.red]="$index/12 < vuLevelB() && $index >= 10"></div>
+            }
+          </div>
+          <div class="flex flex-col items-center justify-center space-y-2">
+            <span class="text-sm">PITCH</span>
+            <input type="range" min="0.5" max="2" step="0.01" [value]="deckB().playbackRate" (input)="onPitchChange($event, 'B')" class="aura-slider vertical-slider">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<audio #audioPlayerA (timeupdate)="onTimeUpdate($event, 'A')" (ended)="onEnded('A')" preload="auto"></audio>
+<audio #audioPlayerB (timeupdate)="onTimeUpdate($event, 'B')" (ended)="onEnded('B')" preload="auto"></audio>
+<input type="file" #fileInput class="hidden" (change)="handleFileInput($event)" accept="audio/*,video/*">
+<video #videoPlayerA class="w-full h-full object-cover media-element" muted playsinline></video>
+<video #videoPlayerB class="w-full h-full object-cover media-element" muted playsinline></video>
