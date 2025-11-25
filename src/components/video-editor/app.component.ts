@@ -1500,7 +1500,7 @@ export class AppComponent implements OnDestroy {
         // Since handleChatbotCommand is called BY the AI, we can't easily "return" it in this async flow
         // unless we trigger a new message TO the AI.
         // For now, we'll console log it, and in a real implementation, we'd push a system message to the chat history.
-        console.log('S.M.U.V.E DIAGNOSTIC DATA:', diagnosticData);
+        console.log('S.M.U.V.E 2.0 DIAGNOSTIC DATA:', diagnosticData);
 
         // If we want the chatbot to react immediately, we might need to expose a method on the Chatbot component
         // to "inject" a system prompt response.
