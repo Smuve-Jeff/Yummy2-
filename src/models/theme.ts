@@ -10,7 +10,7 @@ export interface AppTheme {
 }
 
 export const THEMES: AppTheme[] = [
-  { name: 'Green Vintage', primary: 'green', accent: 'amber', neutral: 'neutral', purple: 'purple', red: 'red', blue: 'blue' },
+  { name: 'Green Vintage', primary: 'indigo', accent: 'pink', neutral: 'neutral', purple: 'purple', red: 'red', blue: 'blue' },
   { name: 'Blue Retro', primary: 'blue', accent: 'fuchsia', neutral: 'zinc', purple: 'purple', red: 'red', blue: 'blue' },
   { name: 'Red Glitch', primary: 'red', accent: 'cyan', neutral: 'stone', purple: 'purple', red: 'red', blue: 'blue' },
   { name: 'Amber Glow', primary: 'amber', accent: 'green', neutral: 'neutral', purple: 'purple', red: 'red', blue: 'blue' },
