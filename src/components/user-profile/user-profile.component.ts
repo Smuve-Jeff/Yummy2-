@@ -67,12 +67,16 @@ export class UserProfileComponent {
   }
 
   updateGoals(e: Event) {
-    this.profileService.updateProfile({ careerGoals: (e.target as HTMLTextAreaElement).value });
+    this.profileService.updateProfile({ goals: (e.target as HTMLTextAreaElement).value });
   }
 
-  updateSpecialties(e: Event) {
+  updateExpertise(e: Event) {
     const val = (e.target as HTMLInputElement).value;
-    this.profileService.updateProfile({ specialties: val.split(',').map(s => s.trim()).filter(s => !!s) });
+    this.profileService.updateProfile({ expertise: val.split(',').map(s => s.trim()).filter(s => !!s) });
+  }
+
+  updateMusicJourney(e: Event) {
+    this.profileService.updateProfile({ musicJourney: (e.target as HTMLTextAreaElement).value });
   }
 
   updateTheme(e: Event) {

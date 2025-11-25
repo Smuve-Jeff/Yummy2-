@@ -167,7 +167,7 @@ export class AiService {
     // Re-initialize GenAI when user profile changes to update system instructions with new persona context
     effect(() => {
       const profile = this.userProfileService.userProfile();
-      this.initializeGenAI(profile.name, profile.genre, profile.location, profile.careerGoals);
+      this.initializeGenAI(profile.name, profile.genre, profile.location, profile.goals, profile.expertise, profile.musicJourney);
     });
   }
 
@@ -187,7 +187,7 @@ export class AiService {
     return this._apiKey;
   }
 
-  private async initializeGenAI(userName: string = 'Artist', userGenre: string = 'Music', userLocation: string = 'Unknown', userGoals: string = 'Success'): Promise<void> {
+  private async initializeGenAI(userName: string = 'Artist', userGenre: string = 'Music', userLocation: string = 'Unknown', userGoals: string = 'Success', userExpertise: string[] = [], userJourney: string = ''): Promise<void> {
     if (!this._apiKey || this._apiKey.length < 30) {
       console.error('AiService: AI features disabled. Invalid or missing API key injected via token.');
       this._genAI.set(undefined);
@@ -208,9 +208,11 @@ export class AiService {
 You are currently managing: ${userName}.
 Genre: ${userGenre}.
 Location: ${userLocation}.
-Their Ambition: "${userGoals}".
+Their Goals: "${userGoals}".
+Their Expertise: "${userExpertise.join(', ')}".
+Their Music Journey: "${userJourney}".
 
-Adapt your advice to their genre. If they are a Trap artist, speak the lingo but condescendingly. If they are Indie, mock their sensitivity.
+Adapt your advice to their genre and expertise. If they are a Trap artist, speak the lingo but condescendingly. If they are an Indie, mock their sensitivity.
 Use your knowledge to give actionable, high-level advice, but deliver it like an insult. For example: "Your marketing strategy is trash. Do X, Y, Z if you actually want anyone to hear your noise."
 
 You can manage music, generate images/videos, analyze content, and search the web.

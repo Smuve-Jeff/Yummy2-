@@ -1,0 +1,21 @@
+<div class="h-full w-full flex flex-col p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-3xl font-bold font-mono tracking-widest uppercase text-center border-b-2 pb-2">
+      Notepad
+    </h2>
+    <button *ngIf="speechRecognitionSupported" (click)="toggleDictation()" class="p-2 rounded-full hover:bg-white/10">
+      <span class="text-2xl">{{ isDictating ? '🎤' : '🎙️' }}</span>
+    </button>
+  </div>
+  <textarea class="w-full h-full bg-black/50 border rounded p-2 font-mono focus:outline-none focus:ring-1 z-0" [(ngModel)]="text"></textarea>
+  <div class="absolute top-4 right-4 z-20">
+    <label class="toggle-switch-container">
+      <span class="toggle-switch-label">Screensaver</span>
+      <div class="toggle-switch">
+        <input type="checkbox" [(ngModel)]="screensaverEnabled">
+        <span class="slider"></span>
+      </div>
+    </label>
+  </div>
+  <app-matrix-background *ngIf="screensaverEnabled"></app-matrix-background>
+</div>

@@ -41,6 +41,8 @@
           } @else if (mainViewMode() === 'networking') {
             <span>[ MY PROFILE ]</span>
           } @else if (mainViewMode() === 'user-profile') {
+            <span>[ NOTEPAD ]</span>
+          } @else if (mainViewMode() === 'notepad') {
             <span>[ PLAYER ]</span>
           }
         </button>
@@ -510,6 +512,9 @@
         }
         @case ('user-profile') {
           <app-user-profile [theme]="currentTheme()"></app-user-profile>
+        }
+        @case ('notepad') {
+          <app-notepad></app-notepad>
         }
       }
     </div>
