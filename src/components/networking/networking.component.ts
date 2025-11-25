@@ -1,8 +1,11 @@
 import { Component, ChangeDetectionStrategy, input, signal, computed, inject, effect, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppTheme } from '../../models/theme';
+import { MapComponent } from '../map/map.component';
+import * as L from 'leaflet';
 // FIX: Import all declared types from AiService for full static import compatibility
 import { AiService, GenerateContentResponse, Type } from '../../services/ai.service'; // Use declared types
+import { GeocodingService } from '../../services/geocoding.service';
 
 export interface ArtistProfile {
   id: string; // NEW: Unique ID for easier lookup
@@ -190,7 +193,7 @@ export const MOCK_ARTISTS: ArtistProfile[] = [
   templateUrl: './networking.component.html',
   styleUrls: ['./networking.component.css'],
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MapComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NetworkingComponent {
@@ -199,7 +202,14 @@ export class NetworkingComponent {
 
   searchLocation = signal('');
   collaborationFilter = signal<string>('');
+  genreFilter = signal('');
+  specialtiesFilter = signal('');
+  influencesFilter = signal('');
+  radiusFilter = signal<number | null>(null);
+  searchLocationLatLng = signal<{ lat: number; lon: number } | null>(null);
+  allArtists = signal<ArtistProfile[]>([]);
   displayedArtists = signal<ArtistProfile[]>([]);
+  filteredArtists = signal<ArtistProfile[]>([]);
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
 
@@ -207,11 +217,14 @@ export class NetworkingComponent {
   showArtistDetailModal = signal(false); // NEW: Controls the detail modal
 
   private aiService = inject(AiService);
+  private geocodingService = inject(GeocodingService);
   isAiAvailable = computed(() => this.aiService.isAiAvailable);
 
   artistProfileSelected = output<ArtistProfile>(); // NEW: Output for parent to react to selection
 
   constructor() {
+    this.allArtists.set(MOCK_ARTISTS.map(artist => ({ ...artist })));
+    this.geocodeArtists();
     effect(() => {
       const query = this.initialSearchQuery();
       if (query && query !== this.searchLocation()) {
@@ -241,9 +254,33 @@ export class NetworkingComponent {
     this.collaborationFilter.set((event.target as HTMLSelectElement).value);
   }
 
+  onGenreFilterInput(event: Event): void {
+    this.genreFilter.set((event.target as HTMLInputElement).value);
+  }
+
+  onSpecialtiesFilterInput(event: Event): void {
+    this.specialtiesFilter.set((event.target as HTMLInputElement).value);
+  }
+
+  onInfluencesFilterInput(event: Event): void {
+    this.influencesFilter.set((event.target as HTMLInputElement).value);
+  }
+
+  onRadiusFilterInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.radiusFilter.set(value ? parseInt(value, 10) : null);
+  }
+
   async searchArtists(): Promise<void> {
     const locationQuery = this.searchLocation().trim();
     const filter = this.collaborationFilter().trim();
+
+    if (locationQuery) {
+      const coordinates = await this.geocodingService.geocode(locationQuery);
+      this.searchLocationLatLng.set(coordinates);
+    } else {
+      this.searchLocationLatLng.set(null);
+    }
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -251,12 +288,16 @@ export class NetworkingComponent {
 
     if (!this.aiService.isAiAvailable) {
       console.warn('AI services unavailable for networking search enhancement. Falling back to basic filter.');
-      let filtered = MOCK_ARTISTS.filter(artist => {
+      let filtered = this.allArtists().filter(artist => {
         const locationMatch = !locationQuery || artist.location.toLowerCase().includes(locationQuery.toLowerCase());
         const collabMatch = !filter || artist.collaborationInterest.some(interest => interest.toLowerCase().includes(filter.toLowerCase()));
-        return locationMatch && collabMatch;
+        const genreMatch = !this.genreFilter() || artist.genres.some(genre => genre.toLowerCase().includes(this.genreFilter().toLowerCase()));
+        const specialtiesMatch = !this.specialtiesFilter() || artist.specialties?.some(specialty => specialty.toLowerCase().includes(this.specialtiesFilter().toLowerCase()));
+        const influencesMatch = !this.influencesFilter() || artist.influences.some(influence => influence.toLowerCase().includes(this.influencesFilter().toLowerCase()));
+        const radiusMatch = !this.radiusFilter() || this.isWithinRadius(artist, locationQuery, this.radiusFilter()!);
+        return locationMatch && collabMatch && genreMatch && specialtiesMatch && influencesMatch && radiusMatch;
       });
-      this.displayedArtists.set(filtered);
+      this.filteredArtists.set(filtered);
       if (filtered.length === 0) {
         this.errorMessage.set('No artists found matching your criteria with basic filter.');
       }
@@ -266,7 +307,14 @@ export class NetworkingComponent {
 
     try {
       // Prompt updated to leverage S.M.U.V.E 2.0's enhanced knowledge
-      const prompt = `You are an expert music industry scout specializing in Southern Rap, Hip-Hop, R&B, and Trap music genres, with advanced management and marketing skills. Given the following artists' profiles (as JSON array):\n\n${JSON.stringify(MOCK_ARTISTS)}\n\nFind artists who match the location "${locationQuery}" (if provided, prioritize this) and are interested in collaborations that include "${filter}" (if provided, prioritize this). Consider their primary genre, influences, and bio for a holistic match. Provide the IDs of the top matching artists in a JSON array: {"matchingArtistIds": ["id1", "id2"]}. If no artists match, return an empty array.`;
+      const prompt = `You are an expert music industry scout specializing in Southern Rap, Hip-Hop, R&B, and Trap music genres, with advanced management and marketing skills. Given the following artists' profiles (as JSON array):\n\n${JSON.stringify(MOCK_ARTISTS)}\n\nFind artists who match the following criteria:
+      - Location: "${locationQuery}" (if provided, prioritize this)
+      - Collaboration Interest: "${filter}" (if provided, prioritize this)
+      - Genre: "${this.genreFilter()}" (if provided)
+      - Specialties: "${this.specialtiesFilter()}" (if provided)
+      - Influences: "${this.influencesFilter()}" (if provided)
+      - Radius: Within ${this.radiusFilter()} miles of the location (if provided)
+      Consider their primary genre, influences, and bio for a holistic match. Provide the IDs of the top matching artists in a JSON array: {"matchingArtistIds": ["id1", "id2"]}. If no artists match, return an empty array.`;
 
       const response: GenerateContentResponse = await this.aiService.genAI!.models.generateContent({
         model: 'gemini-3-pro-preview', // Using Pro for complex filtering
@@ -286,8 +334,8 @@ export class NetworkingComponent {
       const aiResult = JSON.parse(response.text);
       const matchingIds: string[] = aiResult.matchingArtistIds || [];
 
-      const filtered = MOCK_ARTISTS.filter(artist => matchingIds.includes(artist.id));
-      this.displayedArtists.set(filtered);
+      const filtered = this.allArtists().filter(artist => matchingIds.includes(artist.id));
+      this.filteredArtists.set(filtered);
 
       if (filtered.length === 0) {
         this.errorMessage.set('AI found no artists matching your criteria. Try different terms.');
@@ -296,24 +344,30 @@ export class NetworkingComponent {
       console.error('AI failed to enhance networking search:', error);
       this.errorMessage.set('AI search enhancement failed. Falling back to basic filter.');
       // Fallback to basic filtering if AI fails
-      let filtered = MOCK_ARTISTS.filter(artist => {
+      let filtered = this.allArtists().filter(artist => {
         const locationMatch = !locationQuery || artist.location.toLowerCase().includes(locationQuery.toLowerCase());
         const collabMatch = !filter || artist.collaborationInterest.some(interest => interest.toLowerCase().includes(filter.toLowerCase()));
         return locationMatch && collabMatch;
       });
-      this.displayedArtists.set(filtered);
+      this.filteredArtists.set(filtered);
       if (filtered.length === 0) {
         this.errorMessage.set('No artists found matching your criteria with basic filter.');
       }
     } finally {
       this.isLoading.set(false);
+      this.displayedArtists.set(this.filteredArtists());
     }
   }
 
   clearSearch(): void {
     this.searchLocation.set('');
     this.collaborationFilter.set('');
-    this.displayedArtists.set(MOCK_ARTISTS);
+    this.genreFilter.set('');
+    this.specialtiesFilter.set('');
+    this.influencesFilter.set('');
+    this.radiusFilter.set(null);
+    this.filteredArtists.set(this.allArtists());
+    this.displayedArtists.set(this.allArtists());
     this.errorMessage.set(null);
   }
 
@@ -324,5 +378,38 @@ export class NetworkingComponent {
 
   closeArtistDetailModal(): void {
     this.selectedArtistProfile.set(null);
+  }
+
+  onMapBoundsChanged(bounds: L.LatLngBounds): void {
+    const visibleArtists = this.filteredArtists().filter(artist => {
+      if (artist.locationLatLon) {
+        const artistLatLng = L.latLng(artist.locationLatLon.lat, artist.locationLatLon.lon);
+        return bounds.contains(artistLatLng);
+      }
+      return false;
+    });
+    this.displayedArtists.set(visibleArtists);
+  }
+
+  private isWithinRadius(artist: ArtistProfile, searchLocation: string, radius: number): boolean {
+    if (!artist.locationLatLon || !this.searchLocationLatLng()) {
+      return false;
+    }
+
+    const artistLatLng = L.latLng(artist.locationLatLon.lat, artist.locationLatLon.lon);
+    const searchLatLng = L.latLng(this.searchLocationLatLng()!.lat, this.searchLocationLatLng()!.lon);
+    const distance = artistLatLng.distanceTo(searchLatLng) / 1609.34; // Convert meters to miles
+    return distance <= radius;
+  }
+
+  private async geocodeArtists(): Promise<void> {
+    const artistsToGeocode = this.allArtists().filter(artist => !artist.locationLatLon);
+    for (const artist of artistsToGeocode) {
+      const coordinates = await this.geocodingService.geocode(artist.location);
+      if (coordinates) {
+        artist.locationLatLon = coordinates;
+      }
+    }
+    this.filteredArtists.set([...this.allArtists()]);
   }
 }
