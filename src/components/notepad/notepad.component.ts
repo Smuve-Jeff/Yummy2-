@@ -1,6 +1,5 @@
 import { Component, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatrixBackgroundComponent } from '../matrix-background/matrix-background.component';
 
 declare var webkitSpeechRecognition: any;
@@ -10,7 +9,7 @@ declare var webkitSpeechRecognition: any;
   templateUrl: './notepad.component.html',
   styleUrls: ['./notepad.component.css'],
   standalone: true,
-  imports: [CommonModule, FormsModule, MatrixBackgroundComponent],
+  imports: [CommonModule, MatrixBackgroundComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotepadComponent implements OnDestroy {
