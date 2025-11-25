@@ -31,6 +31,8 @@
           } @else if (mainViewMode() === 'dj') {
             <span>[ PIANO EDITOR ]</span>
           } @else if (mainViewMode() === 'piano-roll') {
+            <span>[ DRUM MACHINE ]</span>
+          } @else if (mainViewMode() === 'drum-machine') {
             <span>[ IMAGE EDITOR ]</span>
           } @else if (mainViewMode() === 'image-editor') {
             <span>[ VIDEO EDITOR ]</span>
@@ -67,29 +69,12 @@
             <div class="flex gap-4">
               <div class="flex-1 space-y-3">
                  <div class="w-full aspect-square mx-auto flex items-center justify-center bg-black relative">
-                  @if (deckA().track.videoSrc) {
-                    <video #videoPlayerA class="w-full h-full object-cover" muted playsinline
-                           (mousedown)="onScratchStart($event, 'A')"
-                           (touchstart)="onScratchStart($event, 'A')"
-                           (timeupdate)="onTimeUpdate($event, 'A')"
-                           (loadedmetadata)="onLoadedMetadata($event, 'A')"
-                           (ended)="onEnded('A')" preload="auto">
-                    </video>
-                  } @else {
-                    <div
-                      class="vinyl-platter"
-                      [class.spinning]="deckA().isPlaying && !isScratchingA()"
-                      [style.transform]="scratchRotationA()"
-                      (mousedown)="onScratchStart($event, 'A')"
-                      (touchstart)="onScratchStart($event, 'A')">
-                      <div class="label deck-a" [class]="'bg-' + currentTheme().accent + '-600'" ></div>
-                      <div class="spindle" [class]="djBgStone900"></div>
-                    </div>
-                  }
+                  <app-waveform [audioBuffer]="deckA().audioBuffer" [progress]="deckA().progress" [themeColor]="currentTheme().accent"></app-waveform>
                 </div>
                  <div class="text-center">
                   <h3 class="text-base truncate" [class]="mainTextColorClass()" [title]="deckA().track.title">{{ deckA().track.title }}</h3>
                   <p class="text-xs truncate" [class]="djTextNeutral400Class" [title]="deckA().track.artist">-- {{ deckA().track.artist }} --</p>
+                  <p class="text-xs truncate" [class]="djTextNeutral400Class">BPM: {{ deckA().bpm > 0 ? deckA().bpm.toFixed(2) : '---' }}</p>
                 </div>
                 <div class="space-y-1">
                   <input type="range" min="0" [max]="deckA().duration" [value]="deckA().progress" (input)="onProgressChange($event, 'A')" class="w-full h-1 aura-slider">
@@ -112,6 +97,11 @@
                     [class]="deckA().loop ? djActiveBgClass : ''"
                     [class]="deckA().loop ? 'text-black' : ''">
                     <span>[ REPEAT ]</span>
+                  </button>
+                  <button (click)="syncDeck('A')" class="p-2 border hover:text-black text-xs"
+                    [class]="djBorderClass"
+                    [class]="djHoverBgClass">
+                    <span>[ SYNC ]</span>
                   </button>
                 </div>
               </div>
@@ -292,29 +282,12 @@
              <div class="flex gap-4">
               <div class="flex-1 space-y-3">
                  <div class="w-full aspect-square mx-auto flex items-center justify-center bg-black relative">
-                  @if (deckB().track.videoSrc) {
-                    <video #videoPlayerB class="w-full h-full object-cover" muted playsinline
-                           (mousedown)="onScratchStart($event, 'B')"
-                           (touchstart)="onScratchStart($event, 'B')"
-                           (timeupdate)="onTimeUpdate($event, 'B')"
-                           (loadedmetadata)="onLoadedMetadata($event, 'B')"
-                           (ended)="onEnded('B')" preload="auto">
-                    </video>
-                  } @else {
-                    <div
-                      class="vinyl-platter"
-                      [class.spinning]="deckB().isPlaying && !isScratchingB()"
-                      [style.transform]="scratchRotationB()"
-                      (mousedown)="onScratchStart($event, 'B')"
-                      (touchstart)="onScratchStart($event, 'B')">
-                      <div class="label deck-b" [class]="'bg-' + currentTheme().accent + '-600'" ></div>
-                      <div class="spindle" [class]="djBgStone900"></div>
-                    </div>
-                  }
+                  <app-waveform [audioBuffer]="deckB().audioBuffer" [progress]="deckB().progress" [themeColor]="currentTheme().accent"></app-waveform>
                 </div>
                  <div class="text-center">
                   <h3 class="text-base truncate" [class]="mainTextColorClass()" [title]="deckB().track.title">{{ deckB().track.title }}</h3>
                   <p class="text-xs truncate" [class]="djTextNeutral400Class" [title]="deckB().track.artist">-- {{ deckB().track.artist }} --</p>
+                  <p class="text-xs truncate" [class]="djTextNeutral400Class">BPM: {{ deckB().bpm > 0 ? deckB().bpm.toFixed(2) : '---' }}</p>
                 </div>
                 <div class="space-y-1">
                   <input type="range" min="0" [max]="deckB().duration" [value]="deckB().progress" (input)="onProgressChange($event, 'B')" class="w-full h-1 aura-slider">
@@ -337,6 +310,11 @@
                     [class]="deckB().loop ? djActiveBgClass : ''"
                     [class]="deckB().loop ? 'text-black' : ''">
                     <span>[ REPEAT ]</span>
+                  </button>
+                  <button (click)="syncDeck('B')" class="p-2 border hover:text-black text-xs"
+                    [class]="djBorderClass"
+                    [class]="djHoverBgClass">
+                    <span>[ SYNC ]</span>
                   </button>
                 </div>
               </div>
@@ -375,6 +353,9 @@
         }
         @case ('piano-roll') {
           <app-piano-roll [theme]="currentTheme()" [defaultBpm]="userProfileService.getRecommendedBpm()"></app-piano-roll>
+        }
+        @case ('drum-machine') {
+          <app-drum-machine class="w-full h-full" [initialPattern]="drumMachineInitialPattern()"></app-drum-machine>
         }
         @case ('player') {
         <!-- PLAYER MODE -->
@@ -557,7 +538,8 @@
       [imageToAnalyzeUrl]="imageToAnalyzeUrl()"
       (imageAnalysisResult)="imageAnalysisResult.set($event); imageToAnalyzeUrl.set(null);"
       [mapLocationQuery]="mapLocationQuery()"
-      (mapLocationResult)="mapLocationResult.set($event); mapLocationQuery.set(null);">
+      (mapLocationResult)="mapLocationResult.set($event); mapLocationQuery.set(null);"
+      [chatbotMessage]="chatbotMessage()">
     </app-chatbot>
   }
 

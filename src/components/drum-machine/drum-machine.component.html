@@ -1,0 +1,40 @@
+<div class="drum-machine-container">
+  <!-- Header & Transport Controls -->
+  <div class="transport-controls">
+    <h2 class="title">Drum Machine</h2>
+    <div class="controls-group">
+      <button (click)="togglePlay()" [class.active]="isPlaying()">
+        {{ isPlaying() ? 'Stop' : 'Play' }}
+      </button>
+      <div class="bpm-control">
+        <label for="bpm">BPM</label>
+        <input id="bpm" type="range" min="40" max="240" [value]="bpm()" (input)="onBpmChange($event)" />
+        <span>{{ bpm() }}</span>
+      </div>
+      <button (click)="clearPattern()" class="clear-button">Clear</button>
+    </div>
+  </div>
+
+  <!-- Sequencer Grid -->
+  <div class="sequencer-grid">
+    <!-- Sound Labels Column -->
+    <div class="sound-labels">
+      <div *ngFor="let sound of sounds()" class="sound-label">
+        {{ sound.name }}
+      </div>
+    </div>
+
+    <!-- Steps Grid -->
+    <div class="steps-container">
+      <div *ngFor="let row of grid(); let soundIndex = index" class="step-row">
+        <div *ngFor="let step of row; let stepIndex = index"
+             class="step"
+             [class.active]="step.active"
+             [class.current]="currentStep() === stepIndex && isPlaying()"
+             [class.beat-marker]="stepIndex % 4 === 0"
+             (click)="toggleStep(soundIndex, stepIndex)">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
