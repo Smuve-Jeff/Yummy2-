@@ -11,7 +11,7 @@
 // 1. Ensure globalThis.process and globalThis.process.env exist and are mutable.
 declare global {
   interface Window {
-    AURA_GEMINI_API_KEY: string;
+    SMUVE_GEMINI_API_KEY: string;
     // We declare window.process for robust access, but its env.API_KEY is now guaranteed to be sanitized.
     process: {
         env: {
@@ -64,14 +64,14 @@ console.log(`index.tsx: window.process.env.API_KEY is now explicitly set to a sa
 
 
 // Store the final rigorously sanitized key globally for consistent access by the Angular app.
-// The AiService will exclusively use window.AURA_GEMINI_API_KEY.
-window.AURA_GEMINI_API_KEY = finalSanitizedApiKey;
+// The AiService will exclusively use window.SMUVE_GEMINI_API_KEY.
+window.SMUVE_GEMINI_API_KEY = finalSanitizedApiKey;
 
 // Log the final state that the Angular app will use.
-if (window.AURA_GEMINI_API_KEY === '') {
-  console.warn("index.tsx: Final AURA_GEMINI_API_KEY for application use is empty. AI features will be disabled.");
+if (window.SMUVE_GEMINI_API_KEY === '') {
+  console.warn("index.tsx: Final SMUVE_GEMINI_API_KEY for application use is empty. AI features will be disabled.");
 } else {
-  console.log(`index.tsx: AURA_GEMINI_API_KEY is available for application use (length: ${window.AURA_GEMINI_API_KEY.length}).`);
+  console.log(`index.tsx: SMUVE_GEMINI_API_KEY is available for application use (length: ${window.SMUVE_GEMINI_API_KEY.length}).`);
 }
 
 // --- END: Critical API_KEY sanitization for @google/genai ---
@@ -91,7 +91,7 @@ bootstrapApplication(AppComponent, {
     provideZonelessChangeDetection(),
     provideAiService(), // NEW: Provide AiService at root level
     // NEW: Provide the API_KEY_TOKEN with the sanitized API key
-    { provide: API_KEY_TOKEN, useValue: window.AURA_GEMINI_API_KEY },
+    { provide: API_KEY_TOKEN, useValue: window.SMUVE_GEMINI_API_KEY },
   ],
 }).catch(err => console.error(err));
 

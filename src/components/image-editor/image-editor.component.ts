@@ -23,7 +23,7 @@ export class ImageEditorComponent {
   generatedImageUrls = signal<string[]>([]);
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
-  aspectRatio = signal<'1:1' | '3:4' | '4:3' | '9:16' | '16:9'>('1:1'); // NEW: Aspect ratio signal
+  aspectRatio = signal<'1:1' | '3:4' | '4:3' | '9:16' | '9:16'>('1:1'); // NEW: Aspect ratio signal
 
   private aiService = inject(AiService); // NEW: Inject AiService
   isAiAvailable = computed(() => this.aiService.isAiAvailable);
@@ -41,7 +41,7 @@ export class ImageEditorComponent {
   constructor() {
     // If AI is not available, set an error message
     if (!this.aiService.isAiAvailable) {
-      this.errorMessage.set('AI features are unavailable. An API key is required and was not found or was invalid in window.AURA_GEMINI_API_KEY.');
+      this.errorMessage.set('AI features are unavailable. An API key is required and was not found or was invalid in window.SMUVE_GEMINI_API_KEY.');
     } else {
       // FIX: Assign genAI instance from aiService if available
       this.genAI = this.aiService.genAI;
@@ -78,7 +78,7 @@ export class ImageEditorComponent {
   async generateImage(): Promise<void> {
     // FIX: Access genAI as a getter
     if (!this.isAiAvailable() || !this.genAI) {
-      this.errorMessage.set('AI features are unavailable. Please check your configuration (window.AURA_GEMINI_API_KEY).');
+      this.errorMessage.set('AI features are unavailable. Please check your configuration (window.SMUVE_GEMINI_API_KEY).');
       return;
     }
     // const imageUrl = this.originalImageUrl(); // Not used for imagen-4.0-generate-001 as it's text-to-image

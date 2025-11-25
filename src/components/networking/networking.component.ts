@@ -265,7 +265,7 @@ export class NetworkingComponent {
     }
 
     try {
-      // Prompt updated to leverage S.M.U.V.E's enhanced knowledge
+      // Prompt updated to leverage S.M.U.V.E 2.0's enhanced knowledge
       const prompt = `You are an expert music industry scout specializing in Southern Rap, Hip-Hop, R&B, and Trap music genres, with advanced management and marketing skills. Given the following artists' profiles (as JSON array):\n\n${JSON.stringify(MOCK_ARTISTS)}\n\nFind artists who match the location "${locationQuery}" (if provided, prioritize this) and are interested in collaborations that include "${filter}" (if provided, prioritize this). Consider their primary genre, influences, and bio for a holistic match. Provide the IDs of the top matching artists in a JSON array: {"matchingArtistIds": ["id1", "id2"]}. If no artists match, return an empty array.`;
 
       const response: GenerateContentResponse = await this.aiService.genAI!.models.generateContent({

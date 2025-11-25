@@ -55,7 +55,7 @@ export class VideoEditorComponent implements OnDestroy {
   constructor() {
     // If AI is not available, set an error message
     if (!this.aiService.isAiAvailable) {
-      this.error.set('AI features are unavailable. An API key is required and was not found or was invalid in window.AURA_GEMINI_API_KEY.');
+      this.error.set('AI features are unavailable. An API key is required and was not found or was invalid in window.SMUVE_GEMINI_API_KEY.');
     } else {
       // FIX: Assign genAI instance from aiService if available
       this.genAI = this.aiService.genAI;
@@ -189,7 +189,7 @@ export class VideoEditorComponent implements OnDestroy {
   async generateVideo(fromImage: boolean): Promise<void> {
     // FIX: Access genAI as a getter
     if (!this.isAiAvailable() || !this.genAI) {
-      this.error.set('AI features are unavailable. Please check your configuration (window.AURA_GEMINI_API_KEY).');
+      this.error.set('AI features are unavailable. Please check your configuration (window.SMUVE_GEMINI_API_KEY).');
       return;
     }
     const prompt = this.videoPrompt().trim();

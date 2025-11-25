@@ -2,7 +2,7 @@
   [class]="'text-' + theme().neutral + '-200'"
   [class]="'bg-' + theme().purple + '-900/50'"
   [class]="'border border-' + theme().purple + '-500/30'">
-  <h2 class="text-center text-lg" [class]="'text-' + theme().purple + '-400'">[ AURA VIDEO LAB ]</h2>
+  <h2 class="text-center text-lg" [class]="'text-' + theme().purple + '-400'">[ S.M.U.V.E 2.0 VIDEO LAB ]</h2>
 
   @if (error()) {
     <div class="bg-red-900/50 text-red-300 p-3 text-center border border-red-500 animate-fade-in">
@@ -78,7 +78,7 @@
           [class]="'border-' + theme().purple + '-700/50'">
           <video #recordedVideoPlayer [src]="recordedVideoUrl()" controls class="max-w-full max-h-full object-contain"></video>
         </div>
-        <a [href]="recordedVideoUrl()!" download="aura-recorded-video.webm"
+        <a [href]="recordedVideoUrl()!" download="smuve-recorded-video.webm"
            class="w-full text-center px-4 py-2 border-2 hover:text-black text-lg"
            [class]="'border-' + theme().purple + '-500'"
            [class]="'bg-' + theme().purple + '-800'"
@@ -108,7 +108,7 @@
         rows="4"
         class="w-full p-2 text-sm focus:ring-500 resize-y"
         [class]="'bg-' + theme().purple + '-800/50'"
-        [class]="'border-' + theme().purple + '-500/50'"
+        [class]="'border border-' + theme().purple + '-500/50'"
         [class]="'text-' + theme().neutral + '-200'"
         [class]="'focus:ring-' + theme().purple + '-500'"
         [class]="'focus:border-' + theme().purple + '-500'"
@@ -172,7 +172,7 @@
           [class]="'border-' + theme().purple + '-700/50'">
           <video [src]="generatedVideoUrl()!" controls autoplay loop muted playsinline class="max-w-full max-h-full object-contain"></video>
         </div>
-        <a [href]="generatedVideoUrl()!" download="aura-ai-generated-video.mp4"
+        <a [href]="generatedVideoUrl()!" download="smuve-ai-generated-video.mp4"
            class="w-full text-center px-4 py-2 border-2 hover:text-black text-lg"
            [class]="'border-' + theme().purple + '-500'"
            [class]="'bg-' + theme().purple + '-800'"

@@ -7,7 +7,7 @@
   [class]="'text-' + theme().primary + '-400'">
 
   <div class="flex justify-between items-center mb-4">
-    <h2 class="text-lg">[[ S.M.U.V.E ]]</h2>
+    <h2 class="text-lg">[[ S.M.U.V.E 2.0 ]]</h2>
     <button (click)="onClose()" class="border px-2 hover:text-black transition-colors"
       [class]="'border-' + theme().primary + '-400/50'"
       [class]="'hover:bg-' + theme().primary + '-400'">
@@ -25,7 +25,7 @@
       <div [class.text-right]="message.role === 'user'" [class.text-left]="message.role === 'model'">
         <div class="inline-block p-2 rounded-lg max-w-[85%]"
           [class]="message.role === 'user' ? 'bg-' + theme().primary + '-700/50' : 'bg-' + theme().primary + '-900/50'">
-          <span class="text-xs mr-2" [class]="'text-' + theme().primary + '-300'">{{ message.role === 'user' ? 'YOU:' : 'S.M.U.V.E:' }}</span>
+          <span class="text-xs mr-2" [class]="'text-' + theme().primary + '-300'">{{ message.role === 'user' ? 'YOU:' : 'S.M.U.V.E 2.0:' }}</span>
           <span>{{ message.content }}</span>
           @if (message.urls && message.urls.length > 0) {
             <div class="text-xs mt-2 border-t pt-1"
@@ -52,21 +52,21 @@
     @if (isLoading()) {
       <div class="text-left">
         <div class="inline-block p-2 rounded-lg max-w-[85%]" [class]="'bg-' + theme().primary + '-900/50'">
-          <span class="text-xs mr-2" [class]="'text-' + theme().primary + '-300'">S.M.U.V.E:</span>
+          <span class="text-xs mr-2" [class]="'text-' + theme().primary + '-300'">S.M.U.V.E 2.0:</span>
           <span>Thinking...</span>
         </div>
       </div>
     } @else if (isSpeaking()) {
        <div class="text-left">
         <div class="inline-block p-2 rounded-lg max-w-[85%] animate-pulse" [class]="'bg-' + theme().primary + '-900/50'">
-          <span class="text-xs mr-2" [class]="'text-' + theme().primary + '-300'">S.M.U.V.E:</span>
+          <span class="text-xs mr-2" [class]="'text-' + theme().primary + '-300'">S.M.U.V.E 2.0:</span>
           <span>Speaking...</span>
         </div>
       </div>
     }
     @if (messages().length === 0 && !isLoading() && !isSpeaking() && isAiAvailable()) {
       <div class="text-center py-4" [class]="'text-' + theme().primary + '-400/70'">
-        Hi! I'm S.M.U.V.E. How can I help you with your music today?
+        Hi! I'm S.M.U.V.E 2.0. How can I help you with your music today?
       </div>
     } @else if (!isAiAvailable()) {
        <div class="text-center py-4 text-red-400">

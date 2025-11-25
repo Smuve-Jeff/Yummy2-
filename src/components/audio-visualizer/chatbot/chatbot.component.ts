@@ -115,7 +115,7 @@ export class ChatbotComponent {
     // If AI is not available, add a message to the chat
     // FIX: Access isAiAvailable as a getter
     if (!this.aiService.isAiAvailable) {
-      this.messages.update(msgs => [...msgs, { role: 'model', content: 'AI services are currently unavailable. An API key is required and was not found or was invalid in window.AURA_GEMINI_API_KEY.' }]);
+      this.messages.update(msgs => [...msgs, { role: 'model', content: 'AI services are currently unavailable. An API key is required and was not found or was invalid in window.SMUVE_GEMINI_API_KEY.' }]);
     } else {
       // Chat instance created by AiService constructor if key is valid
       // No need to instantiate genAI and chatInstance here, aiService handles it
@@ -215,7 +215,7 @@ export class ChatbotComponent {
           await this.getArtistInsight(artist); // Get AI insight
           this.appCommand.emit({ action: 'VIEW_ARTIST_PROFILE', parameters: { name: artistName } });
         } else {
-          const errorContent = `S.M.U.V.E doesn't have data for "${artistName}". Please try searching for artists first.`;
+          const errorContent = `S.M.U.V.E 2.0 doesn't have data for "${artistName}". Please try searching for artists first.`;
           this.messages.update(msgs => [...msgs, { role: 'model', content: errorContent }]);
           this.speakResponse(errorContent);
         }
@@ -234,7 +234,7 @@ export class ChatbotComponent {
 
         if (typeof rawAiResponse !== 'string' || rawAiResponse.trim() === '') {
           console.warn('Gemini API returned empty or non-string response:', rawAiResponse);
-          const fallbackContent = 'S.M.U.V.E received an empty response. Please try rephrasing.';
+          const fallbackContent = 'S.M.U.V.E 2.0 received an empty response. Please try rephrasing.';
           this.messages.update(msgs => [...msgs, { role: 'model', content: fallbackContent }]);
           this.speakResponse(fallbackContent);
           this.isLoading.set(false);
@@ -271,7 +271,7 @@ export class ChatbotComponent {
                 this.speakResponse(aiContent);
             } catch (parseError) {
                 console.error("Failed to parse command parameters:", parseError, "from string:", paramsString);
-                const errorContent = `S.M.U.V.E sent a command I couldn't understand. Please try again.`;
+                const errorContent = `S.M.U.V.E 2.0 sent a command I couldn't understand. Please try again.`;
                 this.messages.update(msgs => [...msgs, { role: 'model', content: errorContent }]);
                 this.speakResponse(errorContent);
             }
@@ -395,7 +395,7 @@ export class ChatbotComponent {
         model: "gemini-3-pro-preview", // UPDATED: Changed model to gemini-3-pro-preview
         contents: message, // FIX: Pass the message string directly
         config: {
-          systemInstruction: this.aiService.chatInstance!.config!.systemInstruction, // Use S.M.U.V.E's enhanced system instruction
+          systemInstruction: this.aiService.chatInstance!.config!.systemInstruction, // Use S.M.U.V.E 2.0's enhanced system instruction
           topK: 64,
           topP: 0.95,
           temperature: 1,
@@ -473,7 +473,7 @@ export class ChatbotComponent {
 
     this.isLoading.set(true);
     try {
-      const prompt = `You are S.M.U.V.E, an expert AI music manager toolkit specialized in Southern Rap, Hip-Hop, R&B, and Trap music, with advanced management and marketing skills. Provide an adaptive, detailed insight into the following independent music artist's profile. Your insights should be highly specific to their genre(s) and location, and offer actionable advice. Include:
+      const prompt = `You are S.M.U.V.E 2.0, an expert AI music manager toolkit specialized in Southern Rap, Hip-Hop, R&B, and Trap music, with advanced management and marketing skills. Provide an adaptive, detailed insight into the following independent music artist's profile. Your insights should be highly specific to their genre(s) and location, and offer actionable advice. Include:
       - Strengths (musicality, production, stage presence, lyrical ability etc.)
       - Specific collaboration potential (e.g., "collaborate with a Memphis trap producer for a new single," "feature on an Atlanta R&B singer's track").
       - Career advice (e.g., "focus on building a strong presence on TikTok," "consider licensing your beats for video games").
@@ -498,7 +498,7 @@ Provide insights relevant to their profile and the independent music scene, focu
         model: "gemini-3-pro-preview",
         contents: prompt,
         config: {
-          systemInstruction: this.aiService.chatInstance!.config!.systemInstruction, // Use S.M.U.V.E's enhanced system instruction
+          systemInstruction: this.aiService.chatInstance!.config!.systemInstruction, // Use S.M.U.V.E 2.0's enhanced system instruction
           topK: 64,
           topP: 0.95,
           temperature: 1,
@@ -511,7 +511,7 @@ Provide insights relevant to their profile and the independent music scene, focu
 
     } catch (error) {
       console.error('Error getting artist insight:', error);
-      const errorContent = `S.M.U.V.E failed to provide insight for ${artist.name}.`;
+      const errorContent = `S.M.U.V.E 2.0 failed to provide insight for ${artist.name}.`;
       this.messages.update(msgs => [...msgs, { role: 'model', content: errorContent }]);
       this.speakResponse(errorContent);
     } finally {

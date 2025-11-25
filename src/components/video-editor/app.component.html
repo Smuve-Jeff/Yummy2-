@@ -5,7 +5,7 @@
     [class]="mainBorderClass()"
     [class.dj-vintage-theme]="mainViewMode() === 'dj'">
     <header class="flex justify-between items-center p-2 sm:p-4 border-b-2 border-inherit">
-      <h1 class="text-xl sm:text-2xl" [class]="mainTextColorClass()">[ AURA ]</h1>
+      <h1 class="text-xl sm:text-2xl" [class]="mainTextColorClass()">[ S.M.U.V.E 2.0 ]</h1>
       <div class="flex items-center gap-2">
         <button (click)="musicDataService.exportProject()" class="p-2 border border-inherit hover:text-black text-sm transition-colors"
           [class]="mainBorderClass()"
@@ -77,7 +77,7 @@
                   <p class="text-xs truncate" [class]="djTextNeutral400Class">BPM: {{ deckA().bpm > 0 ? deckA().bpm.toFixed(2) : '---' }}</p>
                 </div>
                 <div class="space-y-1">
-                  <input type="range" min="0" [max]="deckA().duration" [value]="deckA().progress" (input)="onProgressChange($event, 'A')" class="w-full h-1 aura-slider">
+                  <input type="range" min="0" [max]="deckA().duration" [value]="deckA().progress" (input)="onProgressChange($event, 'A')" class="w-full h-1 smuve-slider">
                   <div class="flex justify-between text-xs" [class]="djTextNeutral400Class">
                     <span>{{ formatTime(deckA().progress) }}</span>
                     <span>{{ formatTime(deckA().duration) }}</span>
@@ -109,19 +109,19 @@
               <div class="flex items-center gap-4 pl-4" [class]="'border-l-2 border-' + currentTheme().accent + '-500/20'">
                  <div class="flex flex-col items-center justify-between h-full space-y-2 text-sm">
                     <div class="flex flex-col items-center">
-                      <span>GAIN</span> <input type="range" min="0" max="100" [value]="deckA().gain" (input)="onGainChange($event, 'A')" class="w-20 aura-slider">
+                      <span>GAIN</span> <input type="range" min="0" max="100" [value]="deckA().gain" (input)="onGainChange($event, 'A')" class="w-20 smuve-slider">
                     </div>
                     <div class="flex flex-col items-center">
-                      <span>HI</span> <input type="range" min="0" max="100" [value]="deckA().eqHigh" (input)="onEqChange($event, 'A', 'High')" class="w-20 aura-slider">
+                      <span>HI</span> <input type="range" min="0" max="100" [value]="deckA().eqHigh" (input)="onEqChange($event, 'A', 'High')" class="w-20 smuve-slider">
                     </div>
                     <div class="flex flex-col items-center">
-                      <span>MID</span> <input type="range" min="0" max="100" [value]="deckA().eqMid" (input)="onEqChange($event, 'A', 'Mid')" class="w-20 aura-slider">
+                      <span>MID</span> <input type="range" min="0" max="100" [value]="deckA().eqMid" (input)="onEqChange($event, 'A', 'Mid')" class="w-20 smuve-slider">
                     </div>
                      <div class="flex flex-col items-center">
-                      <span>LOW</span> <input type="range" min="0" max="100" [value]="deckA().eqLow" (input)="onEqChange($event, 'A', 'Low')" class="w-20 aura-slider">
+                      <span>LOW</span> <input type="range" min="0" max="100" [value]="deckA().eqLow" (input)="onEqChange($event, 'A', 'Low')" class="w-20 smuve-slider">
                     </div>
                     <div class="flex flex-col items-center">
-                      <span>FX</span> <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(deckA().filterFreq)" (input)="onFilterChange($event, 'A')" class="w-20 aura-slider">
+                      <span>FX</span> <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(deckA().filterFreq)" (input)="onFilterChange($event, 'A')" class="w-20 smuve-slider">
                     </div>
                  </div>
                  <div class="vu-meter" [class]="'border-' + currentTheme().neutral + '-700'" [class]="djBgStone800">
@@ -131,7 +131,7 @@
                  </div>
                  <div class="flex flex-col items-center justify-center space-y-2">
                     <span class="text-sm">PITCH</span>
-                    <input type="range" min="0.5" max="2" step="0.01" [value]="deckA().playbackRate" (input)="onPitchChange($event, 'A')" class="aura-slider vertical-slider">
+                    <input type="range" min="0.5" max="2" step="0.01" [value]="deckA().playbackRate" (input)="onPitchChange($event, 'A')" class="smuve-slider vertical-slider">
                 </div>
               </div>
             </div>
@@ -194,7 +194,7 @@
               </div>
               @if(recordedMixUrl(); as url) {
                 <div class="flex justify-center gap-2 pt-2 flex-wrap">
-                  <a [href]="url" download="aura-mix.webm" class="text-xs p-1 border hover:text-black"
+                  <a [href]="url" download="smuve-mix.webm" class="text-xs p-1 border hover:text-black"
                     [class]="'border-' + currentTheme().accent + '-500/50'"
                     [class]="djHoverBgClass">[ SAVE WEBM ]</a>
                   <button (click)="saveAsWav()" class="text-xs p-1 border hover:text-black"
@@ -233,23 +233,23 @@
                    </div>
                   <div class="flex flex-col items-center">
                     <span class="text-xs">VOL</span>
-                    <input type="range" min="0" max="100" [value]="micVolume()" (input)="onMicVolumeChange($event)" class="w-20 aura-slider vertical-slider h-24">
+                    <input type="range" min="0" max="100" [value]="micVolume()" (input)="onMicVolumeChange($event)" class="w-20 smuve-slider vertical-slider h-24">
                   </div>
                   <div class="flex flex-col items-center">
                     <span class="text-xs">HI</span>
-                    <input type="range" min="0" max="100" [value]="micEqHigh()" (input)="onMicEqChange($event, 'High')" class="w-20 aura-slider vertical-slider h-24">
+                    <input type="range" min="0" max="100" [value]="micEqHigh()" (input)="onMicEqChange($event, 'High')" class="w-20 smuve-slider vertical-slider h-24">
                   </div>
                   <div class="flex flex-col items-center">
                     <span class="text-xs">MID</span>
-                    <input type="range" min="0" max="100" [value]="micEqMid()" (input)="onMicEqChange($event, 'Mid')" class="w-20 aura-slider vertical-slider h-24">
+                    <input type="range" min="0" max="100" [value]="micEqMid()" (input)="onMicEqChange($event, 'Mid')" class="w-20 smuve-slider vertical-slider h-24">
                   </div>
                   <div class="flex flex-col items-center">
                     <span class="text-xs">LOW</span>
-                    <input type="range" min="0" max="100" [value]="micEqLow()" (input)="onMicEqChange($event, 'Low')" class="w-20 aura-slider vertical-slider h-24">
+                    <input type="range" min="0" max="100" [value]="micEqLow()" (input)="onMicEqChange($event, 'Low')" class="w-20 smuve-slider vertical-slider h-24">
                   </div>
                    <div class="flex flex-col items-center">
                     <span class="text-xs">FX</span>
-                    <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(micFilterFreq())" (input)="onMicFilterChange($event)" class="w-20 aura-slider vertical-slider h-24">
+                    <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(micFilterFreq())" (input)="onMicFilterChange($event)" class="w-20 smuve-slider vertical-slider h-24">
                   </div>
                 </div>
               }
@@ -261,8 +261,8 @@
                   <div class="vu-bar" [class.green]="$index/12 < vuLevelMaster() && $index < 8" [class.yellow]="$index/12 < vuLevelMaster() && $index >= 8 && $index < 10" [class.red]="$index/12 < vuLevelMaster() && $index >= 10"></div>
                 }
               </div>
-              <input type="range" min="-1" max="1" step="0.01" [value]="crossfade()" (input)="onCrossfadeChange($event)" class="flex-grow aura-slider">
-              <input type="range" min="0" max="1" step="0.01" [value]="volume()" (input)="onVolumeChange($event)" class="aura-slider vertical-slider">
+              <input type="range" min="-1" max="1" step="0.01" [value]="crossfade()" (input)="onCrossfadeChange($event)" class="flex-grow smuve-slider">
+              <input type="range" min="0" max="1" step="0.01" [value]="volume()" (input)="onVolumeChange($event)" class="smuve-slider vertical-slider">
             </div>
             <div class="flex justify-between items-center text-xs">
                 <span>DECK A</span>
@@ -290,7 +290,7 @@
                   <p class="text-xs truncate" [class]="djTextNeutral400Class">BPM: {{ deckB().bpm > 0 ? deckB().bpm.toFixed(2) : '---' }}</p>
                 </div>
                 <div class="space-y-1">
-                  <input type="range" min="0" [max]="deckB().duration" [value]="deckB().progress" (input)="onProgressChange($event, 'B')" class="w-full h-1 aura-slider">
+                  <input type="range" min="0" [max]="deckB().duration" [value]="deckB().progress" (input)="onProgressChange($event, 'B')" class="w-full h-1 smuve-slider">
                   <div class="flex justify-between text-xs" [class]="djTextNeutral400Class">
                     <span>{{ formatTime(deckB().progress) }}</span>
                     <span>{{ formatTime(deckB().duration) }}</span>
@@ -322,19 +322,19 @@
               <div class="flex items-center gap-4 pl-4" [class]="'border-l-2 border-' + currentTheme().accent + '-500/20'">
                  <div class="flex flex-col items-center justify-between h-full space-y-2 text-sm">
                     <div class="flex flex-col items-center">
-                      <span>GAIN</span> <input type="range" min="0" max="100" [value]="deckB().gain" (input)="onGainChange($event, 'B')" class="w-20 aura-slider">
+                      <span>GAIN</span> <input type="range" min="0" max="100" [value]="deckB().gain" (input)="onGainChange($event, 'B')" class="w-20 smuve-slider">
                     </div>
                     <div class="flex flex-col items-center">
-                      <span>HI</span> <input type="range" min="0" max="100" [value]="deckB().eqHigh" (input)="onEqChange($event, 'B', 'High')" class="w-20 aura-slider">
+                      <span>HI</span> <input type="range" min="0" max="100" [value]="deckB().eqHigh" (input)="onEqChange($event, 'B', 'High')" class="w-20 smuve-slider">
                     </div>
                     <div class="flex flex-col items-center">
-                      <span>MID</span> <input type="range" min="0" max="100" [value]="deckB().eqMid" (input)="onEqChange($event, 'B', 'Mid')" class="w-20 aura-slider">
+                      <span>MID</span> <input type="range" min="0" max="100" [value]="deckB().eqMid" (input)="onEqChange($event, 'B', 'Mid')" class="w-20 smuve-slider">
                     </div>
                      <div class="flex flex-col items-center">
-                      <span>LOW</span> <input type="range" min="0" max="100" [value]="deckB().eqLow" (input)="onEqChange($event, 'B', 'Low')" class="w-20 aura-slider">
+                      <span>LOW</span> <input type="range" min="0" max="100" [value]="deckB().eqLow" (input)="onEqChange($event, 'B', 'Low')" class="w-20 smuve-slider">
                     </div>
                     <div class="flex flex-col items-center">
-                      <span>FX</span> <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(deckB().filterFreq)" (input)="onFilterChange($event, 'B')" class="w-20 aura-slider">
+                      <span>FX</span> <input type="range" min="0" max="1" step="0.01" [value]="getNormalizedFilterValue(deckB().filterFreq)" (input)="onFilterChange($event, 'B')" class="w-20 smuve-slider">
                     </div>
                  </div>
                  <div class="vu-meter" [class]="'border-' + currentTheme().neutral + '-700'" [class]="djBgStone800">
@@ -344,7 +344,7 @@
                  </div>
                  <div class="flex flex-col items-center justify-center space-y-2">
                     <span class="text-sm">PITCH</span>
-                    <input type="range" min="0.5" max="2" step="0.01" [value]="deckB().playbackRate" (input)="onPitchChange($event, 'B')" class="aura-slider vertical-slider">
+                    <input type="range" min="0.5" max="2" step="0.01" [value]="deckB().playbackRate" (input)="onPitchChange($event, 'B')" class="smuve-slider vertical-slider">
                 </div>
               </div>
             </div>
@@ -378,7 +378,7 @@
               <p class="text-base text-green-400/70 truncate" [title]="deckA().track.artist">-- {{ deckA().track.artist }} --</p>
             </div>
             <div class="space-y-1">
-              <input type="range" min="0" [max]="deckA().duration" [value]="deckA().progress" (input)="onProgressChange($event, 'A')" class="w-full h-1 aura-slider">
+              <input type="range" min="0" [max]="deckA().duration" [value]="deckA().progress" (input)="onProgressChange($event, 'A')" class="w-full h-1 smuve-slider">
               <div class="flex justify-between text-sm text-green-400/70">
                 <span>{{ formatTime(deckA().progress) }}</span>
                 <span>{{ formatTime(deckA().duration) }}</span>
@@ -404,7 +404,7 @@
             <div class="flex flex-col items-center justify-center gap-2 pt-2">
                 <div class="flex items-center gap-4 w-full justify-center">
                   <span class="text-sm" [class]="mainTextColorClass()">VOL:</span>
-                  <input type="range" min="0" max="1" step="0.01" [value]="volume()" (input)="onVolumeChange($event)" class="w-1/2 aura-slider">
+                  <input type="range" min="0" max="1" step="0.01" [value]="volume()" (input)="onVolumeChange($event)" class="w-1/2 smuve-slider">
                   <button (click)="toggleEqPanel()" class="p-2 border text-sm"
                     [class]="mainBorderClass()"
                     [class]="mainHoverBgClass()">[EQ]</button>
@@ -619,4 +619,7 @@
       </div>
     </div>
   }
+  <footer class="absolute bottom-2 left-0 right-0 text-center text-xs" [class]="mainTextColorClass() + '/50'">
+    ©️ Smuve Jeff Presents
+  </footer>
 </main>
