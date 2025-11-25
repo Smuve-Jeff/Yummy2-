@@ -24,7 +24,7 @@ export class MatrixBackgroundComponent implements AfterViewInit, OnDestroy {
   private ctx!: CanvasRenderingContext2D;
   // FIX: Changed intervalId to animationFrameId for requestAnimationFrame
   private animationFrameId?: number;
-  private readonly FRAME_RATE_INTERVAL = 250; // Milliseconds per frame, originally 250ms
+  private readonly FRAME_RATE_INTERVAL = 500; // Milliseconds per frame, originally 250ms
 
   ngAfterViewInit(): void {
     const canvas = this.canvasRef().nativeElement;
@@ -39,15 +39,16 @@ export class MatrixBackgroundComponent implements AfterViewInit, OnDestroy {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const alphabet = 'SmuveJeffPresents';
+    const phraseText = 'Smuve Jeff Presents';
 
     const fontSize = 16;
-    const columns = canvas.width / fontSize;
-    const rainDrops: number[] = [];
 
-    for (let x = 0; x < columns; x++) {
-      rainDrops[x] = 1;
+    interface FallingPhrase {
+      text: string;
+      x: number;
+      y: number;
     }
+    let phrases: FallingPhrase[] = [];
 
     // FIX: Use requestAnimationFrame for smoother animation
     let lastDrawTime = 0;
@@ -55,18 +56,21 @@ export class MatrixBackgroundComponent implements AfterViewInit, OnDestroy {
       if (currentTime - lastDrawTime > this.FRAME_RATE_INTERVAL) {
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
         this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-        this.ctx.fillStyle = '#0F0'; // Green text
-        this.ctx.font = fontSize + 'px monospace';
 
-        for (let i = 0; i < rainDrops.length; i++) {
-          const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-          this.ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
-
-          if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-            rainDrops[i] = 0;
-          }
-          rainDrops[i]++;
+        if (Math.random() > 0.98) {
+            const x = Math.floor(Math.random() * canvas.width);
+            phrases.push({ text: phraseText, x, y: fontSize });
         }
+
+        this.ctx.fillStyle = '#0F0'; // Green text
+        this.ctx.font = (fontSize + 4) + 'px monospace';
+        phrases.forEach(phrase => {
+            this.ctx.fillText(phrase.text, phrase.x, phrase.y);
+            phrase.y += fontSize;
+        });
+
+        phrases = phrases.filter(phrase => phrase.y < canvas.height);
+
         lastDrawTime = currentTime;
       }
       this.animationFrameId = requestAnimationFrame(drawLoop);
