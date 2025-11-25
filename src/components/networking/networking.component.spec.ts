@@ -29,13 +29,6 @@ describe('NetworkingComponent', () => {
   let component: NetworkingComponent;
   let fixture: ComponentFixture<NetworkingComponent>;
 
-  beforeAll(() => {
-    getTestBed().initTestEnvironment(
-      BrowserDynamicTestingModule,
-      platformBrowserDynamicTesting()
-    );
-  });
-
   beforeEach(async () => {
     // Mock the MapComponent to avoid its template dependencies
     vi.mock('../map/map.component', () => ({

@@ -3,6 +3,7 @@ import { MapComponent } from './map.component';
 import { MOCK_ARTISTS } from '../networking/networking.component';
 import * as L from 'leaflet';
 import { SimpleChange } from '@angular/core';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Mock the leaflet plugin to prevent resolution errors
 vi.mock('leaflet.gridlayer.googlemutant', () => ({}));
