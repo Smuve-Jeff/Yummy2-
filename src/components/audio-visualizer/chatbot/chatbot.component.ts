@@ -91,6 +91,7 @@ export class ChatbotComponent {
   imageAnalysisResult = output<string>(); // NEW: Output for image analysis result
   mapLocationQuery = input<string | null>(null); // NEW: Input for map location query
   mapLocationResult = output<string>(); // NEW: Output for map location result
+  chatbotMessage = input<string | null>(null); // NEW: Input for messages from the app
 
   messages = signal<ChatMessage[]>([]);
   userMessage = signal('');
@@ -168,6 +169,15 @@ export class ChatbotComponent {
       if (query && !this.isLoading()) {
         this.messages.update(msgs => [...msgs, { role: 'user', content: `Find on map: ${query}` }]);
         this.sendGoogleMapsQuery(query);
+      }
+    });
+
+    // Effect to observe chatbotMessage input and send message
+    effect(() => {
+      const message = this.chatbotMessage();
+      if (message && !this.isLoading()) {
+        this.userMessage.set(message);
+        this.sendMessage();
       }
     });
   }
@@ -545,14 +555,39 @@ Provide insights relevant to their profile and the independent music scene, focu
   speakResponse(text: string): void {
     if ('speechSynthesis' in window) {
       this.stopSpeaking(); // Stop any previous speech
-      this.speechUtterance = new SpeechSynthesisUtterance(text);
-      this.speechUtterance.onstart = () => this.isSpeaking.set(true);
-      this.speechUtterance.onend = () => this.isSpeaking.set(false);
-      this.speechUtterance.onerror = (event) => {
-        console.error('Speech synthesis error:', event);
-        this.isSpeaking.set(false);
+
+      // Split the text into sentences
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+
+      this.isSpeaking.set(true);
+      let sentenceIndex = 0;
+
+      const speakSentence = () => {
+        if (sentenceIndex >= sentences.length) {
+          this.isSpeaking.set(false);
+          return;
+        }
+
+        const sentence = sentences[sentenceIndex].trim();
+        if (sentence) {
+          this.speechUtterance = new SpeechSynthesisUtterance(sentence);
+          this.speechUtterance.pitch = Math.random() * 2; // Random pitch between 0 and 2
+          this.speechUtterance.onend = () => {
+            sentenceIndex++;
+            speakSentence();
+          };
+          this.speechUtterance.onerror = (event) => {
+            console.error('Speech synthesis error:', event);
+            this.isSpeaking.set(false);
+          };
+          window.speechSynthesis.speak(this.speechUtterance);
+        } else {
+          sentenceIndex++;
+          speakSentence();
+        }
       };
-      window.speechSynthesis.speak(this.speechUtterance);
+
+      speakSentence();
     } else {
       console.warn('Speech Synthesis API not supported in this browser.');
     }

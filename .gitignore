@@ -1,3 +1,4 @@
 .idx/
 dist/
 node_modules/
+server.log
