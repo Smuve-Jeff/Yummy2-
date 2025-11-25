@@ -2,7 +2,6 @@ import { Component, ChangeDetectionStrategy, signal, ElementRef, viewChild, effe
 import { CommonModule } from '@angular/common';
 import { EqPanelComponent } from '../eq-panel/eq-panel.component'; // Corrected path for EqPanelComponent
 import { MatrixBackgroundComponent } from '../matrix-background/matrix-background.component';
-import { ChatbotComponent } from '../audio-visualizer/chatbot/chatbot.component';
 import { ImageEditorComponent } from '../image-editor/image-editor.component';
 import { VideoEditorComponent } from './video-editor.component';
 import { AudioVisualizerComponent } from '../audio-visualizer/audio-visualizer.component'; // Corrected import path
@@ -39,7 +38,7 @@ export interface Enhancements {
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, DrumMachineComponent, WaveformComponent, NetworkingComponent, UserProfileComponent, NotepadComponent, DjComponent],
+  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, DrumMachineComponent, WaveformComponent, NetworkingComponent, UserProfileComponent, NotepadComponent, DjComponent],
 })
 export class AppComponent implements OnDestroy {
   audioPlayerARef = viewChild<ElementRef<HTMLAudioElement>>('audioPlayerA');

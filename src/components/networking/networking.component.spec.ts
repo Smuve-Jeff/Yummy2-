@@ -8,7 +8,6 @@ import { signal, computed } from '@angular/core';
 import { vi, describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { MapComponent } from '../map/map.component';
 import { AppTheme } from '../../models/theme';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 // --- Mocks ---
 
@@ -44,7 +43,7 @@ describe('NetworkingComponent', () => {
     }));
 
     await TestBed.configureTestingModule({
-      imports: [NetworkingComponent, NoopAnimationsModule], // Import the standalone component and disable animations
+      imports: [NetworkingComponent], // Import the standalone component
       providers: [
         { provide: AiService, useValue: mockAiService },
         { provide: GeocodingService, useValue: mockGeocodingService },
@@ -54,9 +53,9 @@ describe('NetworkingComponent', () => {
     .overrideComponent(NetworkingComponent, {
         remove: { imports: [MapComponent] },
         add: { imports: [] }
-    })
-    .compileComponents();
+    });
 
+    await TestBed.compileComponents();
     fixture = TestBed.createComponent(NetworkingComponent);
     component = fixture.componentInstance;
 
