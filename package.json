@@ -1,6 +1,6 @@
 {
   "name": "smuve-ai-music-manager",
-  "description": SmuveJeffPresents "S.M.U.V.E. AI Chatbot Music Manager",
+  "description": "SmuveJeffPresents 'S.M.U.V.E. AI Chatbot Music Manager'",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -23,7 +23,8 @@
     "@angular/platform-browser": "^20.3.0",
     "@google/genai": "^1.29.1",
     "rxjs": "^7.8.2",
-    "tailwindcss": "latest"
+    "tailwindcss": "latest",
+    "web-audio-beat-detector": "^8.2.31"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

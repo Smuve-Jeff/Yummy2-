@@ -91,6 +91,7 @@ export class ChatbotComponent {
   imageAnalysisResult = output<string>(); // NEW: Output for image analysis result
   mapLocationQuery = input<string | null>(null); // NEW: Input for map location query
   mapLocationResult = output<string>(); // NEW: Output for map location result
+  chatbotMessage = input<string | null>(null); // NEW: Input for messages from the app
 
   messages = signal<ChatMessage[]>([]);
   userMessage = signal('');
@@ -168,6 +169,15 @@ export class ChatbotComponent {
       if (query && !this.isLoading()) {
         this.messages.update(msgs => [...msgs, { role: 'user', content: `Find on map: ${query}` }]);
         this.sendGoogleMapsQuery(query);
+      }
+    });
+
+    // Effect to observe chatbotMessage input and send message
+    effect(() => {
+      const message = this.chatbotMessage();
+      if (message && !this.isLoading()) {
+        this.userMessage.set(message);
+        this.sendMessage();
       }
     });
   }

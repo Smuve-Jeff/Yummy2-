@@ -1,5 +1,6 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { DeckState, initialDeckState, Track } from '../components/video-editor/app.component'; // Importing types
+import { CloudStorageService } from './cloud-storage.service';
 
 export interface PianoRollNote {
   midi: number;
@@ -9,11 +10,14 @@ export interface PianoRollNote {
 
 export type RepeatMode = 'off' | 'one' | 'all';
 
+import { Step } from '../components/drum-machine/drum-machine.component';
+
 export interface AppState {
   playlist: Track[];
   deckA: DeckState;
   deckB: DeckState;
   pianoRollSequence: { [key: number]: boolean[] }; // JSON friendly map
+  drumMachinePattern: { grid: Step[][]; bpm: number };
   bpm: number;
   shuffle: boolean;
   repeat: RepeatMode;
@@ -23,7 +27,7 @@ export interface AppState {
   providedIn: 'root'
 })
 export class MusicDataService {
-  private readonly STORAGE_KEY = 'aura_music_state';
+  private cloudStorageService = inject(CloudStorageService);
 
   // State Signals
   playlist = signal<Track[]>([]);
@@ -37,6 +41,9 @@ export class MusicDataService {
   // We will store as a Map signal for the component, but serialize to object for storage
   pianoRollSequence = signal<Map<number, boolean[]>>(new Map());
   bpm = signal<number>(120);
+
+  // Drum Machine State
+  drumMachinePattern = signal<{ grid: Step[][]; bpm: number }>({ grid: [], bpm: 120 });
 
   // Playback Settings
   shuffle = signal<boolean>(false);
@@ -58,33 +65,29 @@ export class MusicDataService {
       seqObj[key.toString()] = val;
     });
 
-    const state = {
+    const state: AppState = {
       playlist: this.playlist(),
-      // We don't save full deck state (playing status etc) to avoid auto-playing on reload, just maybe tracks?
-      // For now, let's save the playlist and settings.
-      // Saving deck tracks is useful.
-      deckATrack: this.deckA().track,
-      deckBTrack: this.deckB().track,
+      deckA: this.deckA(),
+      deckB: this.deckB(),
       pianoRollSequence: seqObj,
+      drumMachinePattern: this.drumMachinePattern(),
       bpm: this.bpm(),
       shuffle: this.shuffle(),
-      repeat: this.repeat()
+      repeat: this.repeat(),
     };
 
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+    this.cloudStorageService.saveProject(state);
   }
 
   private loadState(): void {
-    const raw = localStorage.getItem(this.STORAGE_KEY);
-    if (!raw) return;
+    const state = this.cloudStorageService.loadProject();
+    if (!state) return;
 
     try {
-      const state = JSON.parse(raw);
-
       if (state.playlist) this.playlist.set(state.playlist);
 
-      if (state.deckATrack) this.deckA.update(d => ({ ...d, track: state.deckATrack }));
-      if (state.deckBTrack) this.deckB.update(d => ({ ...d, track: state.deckBTrack }));
+      if (state.deckA) this.deckA.set(state.deckA);
+      if (state.deckB) this.deckB.set(state.deckB);
 
       if (state.pianoRollSequence) {
         const map = new Map<number, boolean[]>();
@@ -93,6 +96,8 @@ export class MusicDataService {
         });
         this.pianoRollSequence.set(map);
       }
+
+      if (state.drumMachinePattern) this.drumMachinePattern.set(state.drumMachinePattern);
 
       if (state.bpm) this.bpm.set(state.bpm);
       if (state.shuffle !== undefined) this.shuffle.set(state.shuffle);
@@ -166,6 +171,7 @@ export class MusicDataService {
         bpm: this.bpm(),
         sequence: seqObj
       },
+      drumMachine: this.drumMachinePattern(),
       decks: {
         A: this.deckA().track,
         B: this.deckB().track
@@ -192,6 +198,10 @@ export class MusicDataService {
         this.pianoRollSequence.set(map);
       }
     }
+
+      if (data.drumMachine) {
+        this.drumMachinePattern.set(data.drumMachine);
+      }
 
     if (data.decks) {
       if (data.decks.A) this.deckA.update(d => ({ ...d, track: data.decks.A }));

@@ -1,0 +1,145 @@
+/* --- Main Container --- */
+.drum-machine-container {
+  display: flex;
+  flex-direction: column;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  padding: 20px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  border: 1px solid #333;
+}
+
+/* --- Transport Controls --- */
+.transport-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #2a2a2a;
+  border-radius: 6px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #00bcd4; /* Accent color */
+}
+
+.controls-group {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+button {
+  background-color: #00bcd4;
+  color: #1a1a1a;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #0097a7;
+}
+
+button.active {
+  background-color: #ff4081; /* Active color */
+  color: #fff;
+}
+
+.clear-button {
+  background-color: #444;
+  color: #e0e0e0;
+}
+
+.clear-button:hover {
+  background-color: #555;
+}
+
+.bpm-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bpm-control label {
+  font-weight: bold;
+}
+
+.bpm-control input[type="range"] {
+  width: 150px;
+}
+
+.bpm-control span {
+  font-variant-numeric: tabular-nums;
+  width: 40px;
+  text-align: right;
+  font-weight: bold;
+}
+
+/* --- Sequencer Grid --- */
+.sequencer-grid {
+  display: flex;
+}
+
+.sound-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding-right: 15px;
+}
+
+.sound-label {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #aaa;
+  font-weight: 500;
+}
+
+.steps-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.step-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.step {
+  width: 5%;
+  aspect-ratio: 1;
+  background-color: #333;
+  border: 1px solid #222;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.1s, transform 0.1s;
+  margin: 2px;
+}
+
+.step:hover {
+  background-color: #444;
+}
+
+.step.beat-marker {
+  background-color: #3a3a3a; /* Slightly lighter for every 4th beat */
+}
+
+.step.active {
+  background-color: #00bcd4;
+  box-shadow: 0 0 10px #00bcd4;
+}
+
+.step.current {
+  transform: scale(1.1);
+  border: 2px solid #ff4081;
+}

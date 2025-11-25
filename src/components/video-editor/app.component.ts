@@ -7,6 +7,8 @@ import { ImageEditorComponent } from '../image-editor/image-editor.component';
 import { VideoEditorComponent } from './video-editor.component';
 import { AudioVisualizerComponent } from '../audio-visualizer/audio-visualizer.component'; // Corrected import path
 import { PianoRollComponent } from '../piano-roll/piano-roll.component'; // Import PianoRollComponent
+import { DrumMachineComponent } from '../drum-machine/drum-machine.component'; // Import DrumMachineComponent
+import { WaveformComponent } from '../waveform/waveform.component'; // Import WaveformComponent
 import { NetworkingComponent, ArtistProfile, MOCK_ARTISTS } from '../networking/networking.component'; // NEW: Import NetworkingComponent and types
 import { UserProfileComponent } from '../user-profile/user-profile.component'; // NEW: Import UserProfileComponent
 import { UserProfileService } from '../../services/user-profile.service'; // NEW: Import UserProfileService
@@ -14,6 +16,7 @@ import { MusicDataService } from '../../services/music-data.service'; // NEW: Im
 import { AiService } from '../../services/ai.service'; // NEW: Import AiService
 import { AppTheme, THEMES } from '../../models/theme';
 import { encodeWav } from '../../utils/wav-encoder';
+import { guess } from 'web-audio-beat-detector';
 
 // FIX: Augment HTMLAudioElement to include custom __sourceNode property
 declare global {
@@ -52,6 +55,7 @@ export interface DeckState {
   eqHigh: number;
   eqMid: number;
   eqLow: number;
+  bpm: number; // NEW: To store the detected BPM
   wasPlayingBeforeScratch?: boolean; // NEW: To restore play state after scratch
 }
 
@@ -72,6 +76,7 @@ export const initialDeckState: DeckState = {
   eqHigh: 50, // 0-100
   eqMid: 50, // 0-100
   eqLow: 50, // 0-100
+  bpm: 0,
   wasPlayingBeforeScratch: false,
 };
 
@@ -88,7 +93,7 @@ type ScratchState = {
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, NetworkingComponent, UserProfileComponent],
+  imports: [CommonModule, EqPanelComponent, MatrixBackgroundComponent, ChatbotComponent, ImageEditorComponent, VideoEditorComponent, AudioVisualizerComponent, PianoRollComponent, DrumMachineComponent, WaveformComponent, NetworkingComponent, UserProfileComponent],
   host: {
     // Moved host listeners from @HostListener decorators to the host object
     '(window:mousemove)': 'onScratch($event)',
@@ -98,6 +103,30 @@ type ScratchState = {
   },
 })
 export class AppComponent implements OnDestroy {
+  syncDeck(deckId: 'A' | 'B'): void {
+    const deckToSync = deckId === 'A' ? this.deckA() : this.deckB();
+    const otherDeck = deckId === 'A' ? this.deckB() : this.deckA();
+
+    if (deckToSync.bpm > 0 && otherDeck.bpm > 0) {
+      const newPlaybackRate = otherDeck.bpm / deckToSync.bpm;
+      const deckRef = deckId === 'A' ? this.audioPlayerARef() : this.audioPlayerBRef();
+      const videoRef = deckId === 'A' ? this.videoPlayerARef() : this.videoPlayerBRef();
+
+      if (deckRef?.nativeElement) {
+        deckRef.nativeElement.playbackRate = newPlaybackRate;
+        if (videoRef?.nativeElement) {
+          videoRef.nativeElement.playbackRate = newPlaybackRate;
+        }
+      }
+
+      if (deckId === 'A') {
+        this.deckA.update(state => ({ ...state, playbackRate: newPlaybackRate }));
+      } else {
+        this.deckB.update(state => ({ ...state, playbackRate: newPlaybackRate }));
+      }
+    }
+  }
+
   audioPlayerARef = viewChild<ElementRef<HTMLAudioElement>>('audioPlayerA');
   videoPlayerARef = viewChild<ElementRef<HTMLVideoElement>>('videoPlayerA');
   audioPlayerBRef = viewChild<ElementRef<HTMLAudioElement>>('audioPlayerB');
@@ -105,7 +134,7 @@ export class AppComponent implements OnDestroy {
   fileInputRef = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
   // App mode
-  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'image-editor' | 'video-editor' | 'networking' | 'user-profile'>('player');
+  mainViewMode = signal<'player' | 'dj' | 'piano-roll' | 'drum-machine' | 'image-editor' | 'video-editor' | 'networking' | 'user-profile'>('player');
   showChatbot = signal(true); // Chatbot is a modal, starts open for initial greeting
 
   // DJ State
@@ -239,7 +268,9 @@ export class AppComponent implements OnDestroy {
   // NEW: AI Feature States
   imageEditorInitialPrompt = signal<string>(''); // For image editor commands from chatbot
   videoEditorInitialPrompt = signal<string>(''); // For video editor commands from chatbot
+  drumMachineInitialPattern = signal<any>(null); // For drum machine commands from chatbot
   lastImageEditorImageUrl = signal<string | null>(null); // To pass image from editor to video generator
+  chatbotMessage = signal<string | null>(null); // To send a message to the chatbot
 
   showApplyAlbumArtModal = signal(false);
   imageToApplyAsAlbumArt = signal<string | null>(null);
@@ -489,6 +520,9 @@ export class AppComponent implements OnDestroy {
       console.error(`Audio player reference for deck ${deckId} not found.`);
       return;
     }
+
+    // Track Analysis (BPM and Waveform)
+    this.analyzeTrack(track, deckId);
 
     // Set loading state
     this.loadingTargetDeck.set(deckId);
@@ -1265,7 +1299,7 @@ export class AppComponent implements OnDestroy {
 
   // --- App Mode Management ---
   toggleMainViewMode(): void {
-    const modes = ['player', 'dj', 'piano-roll', 'image-editor', 'video-editor', 'networking', 'user-profile']; // NEW: Add 'user-profile'
+    const modes = ['player', 'dj', 'piano-roll', 'drum-machine', 'image-editor', 'video-editor', 'networking', 'user-profile']; // NEW: Add 'drum-machine' and 'user-profile'
     const currentMode = this.mainViewMode();
     const currentIndex = modes.indexOf(currentMode);
     const nextIndex = (currentIndex + 1) % modes.length;
@@ -1389,6 +1423,19 @@ export class AppComponent implements OnDestroy {
           this.showChatbot.set(false); // Close chatbot after sending command
         }
         break;
+      case 'GENERATE_DRUM_PATTERN':
+        if (parameters.style) {
+          this.drumMachineInitialPattern.set(null); // Clear previous pattern
+          this.drumMachineInitialPattern.set({ style: parameters.style, bpm: parameters.bpm });
+          this.mainViewMode.set('drum-machine');
+          this.showChatbot.set(false);
+        }
+        break;
+      case 'SYNC_DECK':
+        if (parameters.deck === 'A' || parameters.deck === 'B') {
+          this.syncDeck(parameters.deck);
+        }
+        break;
       case 'ANALYZE_IMAGE':
         if (parameters.imageUrl) {
           this.imageToAnalyzeUrl.set(parameters.imageUrl);
@@ -1427,6 +1474,13 @@ export class AppComponent implements OnDestroy {
             // Optionally send a message back to chatbot that artist was not found
           }
         }
+        break;
+      case 'ANALYZE_MIX':
+        const eqSettings = this.eqSettings();
+        const eqString = eqSettings.map(band => `${band.label}: ${band.value}`).join(', ');
+        const message = `Analyze these master EQ settings: ${eqString}`;
+        this.chatbotMessage.set(message);
+        this.showChatbot.set(true);
         break;
       case 'DIAGNOSE_TRACK':
         const profile = this.userProfileService.userProfile();
@@ -1530,5 +1584,32 @@ export class AppComponent implements OnDestroy {
       newTheme = this.THEMES[Math.floor(Math.random() * this.THEMES.length)];
     }
     this.currentTheme.set(newTheme);
+  }
+
+  private async analyzeTrack(track: Track, deckId: 'A' | 'B'): Promise<void> {
+    if (!track.audioSrc) {
+      return;
+    }
+
+    try {
+      const response = await fetch(track.audioSrc);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      const { bpm } = await guess(audioBuffer);
+
+      if (deckId === 'A') {
+        this.deckA.update(state => ({ ...state, bpm, audioBuffer }));
+      } else {
+        this.deckB.update(state => ({ ...state, bpm, audioBuffer }));
+      }
+    } catch (error) {
+      console.error(`Track analysis failed for deck ${deckId}:`, error);
+      // Set BPM and audioBuffer to default values if analysis fails
+      if (deckId === 'A') {
+        this.deckA.update(state => ({ ...state, bpm: 0, audioBuffer: undefined }));
+      } else {
+        this.deckB.update(state => ({ ...state, bpm: 0, audioBuffer: undefined }));
+      }
+    }
   }
 }
