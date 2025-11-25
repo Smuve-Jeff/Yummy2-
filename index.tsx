@@ -80,8 +80,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 // FIX: Import InjectionToken for API_KEY_TOKEN
 import { provideZonelessChangeDetection, InjectionToken } from '@angular/core';
 import { AppComponent } from './src/components/video-editor/app.component'; // Corrected path
-// FIX: Import provideAiService correctly from src/services/ai.service
-import { provideAiService } from './src/services/ai.service'; // NEW: Import provideAiService
+import { AiService } from './src/services/ai.service';
 
 // NEW: Define and export the InjectionToken for the API Key
 export const API_KEY_TOKEN = new InjectionToken<string>('GEMINI_API_KEY');
@@ -89,7 +88,7 @@ export const API_KEY_TOKEN = new InjectionToken<string>('GEMINI_API_KEY');
 bootstrapApplication(AppComponent, {
   providers: [
     provideZonelessChangeDetection(),
-    provideAiService(), // NEW: Provide AiService at root level
+    AiService,
     // NEW: Provide the API_KEY_TOKEN with the sanitized API key
     { provide: API_KEY_TOKEN, useValue: window.AURA_GEMINI_API_KEY },
   ],

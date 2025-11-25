@@ -21,7 +21,12 @@
     "@angular/compiler-cli": "^20.3.0",
     "@angular/core": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
+    "@angular/platform-browser-dynamic": "^20.3.0",
     "@google/genai": "^1.29.1",
+    "@types/leaflet": "^1.9.21",
+    "@types/leaflet.gridlayer.googlemutant": "^0.4.11",
+    "leaflet": "^1.9.4",
+    "leaflet.gridlayer.googlemutant": "^0.15.0",
     "rxjs": "^7.8.2",
     "tailwindcss": "latest",
     "web-audio-beat-detector": "^8.2.31"
